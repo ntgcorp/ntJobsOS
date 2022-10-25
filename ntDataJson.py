@@ -9,6 +9,7 @@ class NC_Json:
     bSet=False
 
 # Load JSON file to Dict
+# Test
 # Return lResult. 0=sResult, 1=dict
 # ----------------------------------------------------------------------------------------
     def FileRead(sFile):
