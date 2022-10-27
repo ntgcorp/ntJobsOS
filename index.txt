@@ -1,14 +1,9 @@
-------------------- ntJobsPy Framework -----------------------------
+- Layer Applicativo
+ntSdbMail: SDB Conversione da flusso SDB a ntJobs.Mail 
+ntMail.py: Programma Mailing INI_PARAMETRI+CSV_FLUSSO_MAIL
 
-- Layer Sistema Operativo ntJobs
-ntSys.py: Libreria Base ntJobs. Richiamata da tutti i moduli
-ntDataFiles.py: Libreria gestione INI/CSV/JSON. 
-ntDate.py: Libreria gestione DATE
-ntDataJobs: Libreria gestione Dati in Json
-ntMailClass.py: Libreria Mailing - Singola Mail - Usata da ntMail ed altri
-ntTableClass.py: Libreria gestione Array come Tabella
-ntJobsClass.py: Orchestratore Processi (core ntJobsOS)
-ntJobs.py: Avvio ntJobs
+- Layer Test
+ntTest.py: Test principale
 
 --------------------  Cartelle ---------------------
 Temp: Cartella di lavoro JOBS e ntJibs
