@@ -6,6 +6,8 @@ from pathlib import Path
 import os
 # For NF_FileDelete (rmdir)
 import shutil
+# For NF_PathFind
+import glob
 from sys import platform
 # Lib per CheckEmail
 import re
@@ -163,14 +165,23 @@ def	NF_PathCopy(sPathIn, sPathOut, sType="F"):
     NF_PathCopy=sResult
     
 # Cerca un Path, anche ricorsivo con jolly e crea un array
+# R=Recursivo
 # Ritorna lResult, 0=Risultato, 1=Lista
-def NF_PathFind(sPath, sType):
-    sProc="NF_PathCopy"
+def NF_PathFind(sPath, sType=""):
+    sProc="NF_PathFind"
     sResult=""
+    asPath=None
+    
+# Flag
+    bRec=NF_StrSearch(0,sType,"R") != -1
+    
+# Ricerca
+    for f in glob.glob(sPath, recursive=bRec):
+        asPath.append(f)
     
 # Uscita
     sResult=NF_ErrorProc(sResult,sProc)
-    lResult=[
+    lResult=[sResult, asPath]
     NF_PathFind=lResult
 
     
@@ -278,13 +289,6 @@ def NF_NullToStr(vValue):
     else:
         return str(vValue)
 
-# String Test in Boolean
-def NF_StrTest(sResult):
-    if sResult != "":
-        return True
-    else:
-        return False
-    
 # Range
 def NF_Range(vValue, vMin, vMax):
     return (vValue>=vMin) and (vValue<=vMax)
@@ -320,13 +324,6 @@ def NF_ErrorProc(sResult, sProc):
         return sResult
 
 # Ritorno stringa Test
-def NF_StrTestResult(sResult, sProc):
-    if (sResult != ""):
-        return "Test " + sProc + ": " + str(sResult)
-    else:
-        return "Test " + sProc + ": OK"
-
-# Ritorno stringa Test
 def NF_DebugFase(bDebug, sText, sProc):
     if bDebug:
         if (sText == ""): sText="Start"
@@ -357,6 +354,30 @@ def NF_StrBool(sText):
     bResult=iif(sText=="TRUE",True,False)
     return bResult
 
+
+# Cerca substr i String, -1=Left, 0=Internal, 1=Right
+def NF_StrFind(nPos, sString, sFind):
+    nResult=-1
+
+# Verifiche
+    if sString=="" or sFind=="": return -1
+    
+# Casi
+    nFind=len(sFind)
+    if nPos==-1:
+        sString2=NF_StrLeft(sString,nFind)
+        if sString2=sFind: nResult=1
+    if nPos==1:
+        sString2=NF_StrRight(sString,nFind)
+        if sString2=sFind: nResult=len(sString)-nFind
+    elif nPos=0:
+        nResult=sString.find(sFind)
+        if nResult != -1: nResult=nResult+1
+    
+# Uscita
+    return nResult
+    
+
 # convertoto in STr + Trim + UCase +
 def NF_StrNorm(sText):
     sText=str(sText)
@@ -379,6 +400,13 @@ def NF_StrStrip(sText,sType):
         sText = ''.join(cChar for cChar in sText if ( ord(cChar)!=32 )  )
     return sText
 
+# String Test in Boolean
+def NF_StrTest(sResult):
+    if sResult != "":
+        return True
+    else:
+        return False
+    
 # Return lResult, 0=Result, 1=StringRead
 def NF_StrFileRead(sFile):
     sProc="StrFileRead"
@@ -395,6 +423,13 @@ def NF_StrFileRead(sFile):
     txt_file.close()
     lResult=[sResult,lines]
     return lResult
+
+# Ritorno stringa Test
+def NF_StrTestResult(sResult, sProc):
+    if (sResult != ""):
+        return "Test " + sProc + ": " + str(sResult)
+    else:
+        return "Test " + sProc + ": OK"
 
 def NF_IsString(vParam):
     return (type(vParam)==type("x"))
