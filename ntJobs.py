@@ -13,23 +13,23 @@ def JOBS_Start():
     if jData.sResult=="":
         if jData.INI_Read()=="":
 # Ciclo
-        while bExit==False:
+            while bExit==False:
     # Prende Processi
-            if jData.Get()=="":
-                ntSys.NF_Wait(JOBS_WAIT_STD)
-            else:
-                break
+                if jData.Get()=="":
+                    ntSys.NF_Wait(JOBS_WAIT_STD)
+                else:
+                    break
     # Esegue Processi
-            if jData.Exec()=="":
-                ntSys.NF_Wait(JOBS_WAIT_STD)
-            else:
-                break
+                if jData.Exec()=="":
+                    ntSys.NF_Wait(JOBS_WAIT_STD)
+                else:
+                    break
     # Uscita per problemi su Get e Exec
-            if jData.sResult != "":  bExit=True
+                if jData.sResult != "":  bExit=True
     # Uscita
             if ntSys.NF_FileExist(sFileExit) and bExit==False:
                 bExit=True
-                os.remove(sFileExist)
+                sResult=ntSys.NF_FileDelete(sFileExist)
             if jData.sResult != "":  bExit=True
 # ----------------------------- MAIN --------------------------
 

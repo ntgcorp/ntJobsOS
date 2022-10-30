@@ -7,11 +7,17 @@
 
 import smtplib, ssl
 import yagmail
+
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
 import ntSys
+
+# Lib per CheckEmail
+import re
+
 NT_ENV_TEST_MAILC=True
 asFMT_MAIL_HDR=("ID","TO","CC","BCC","SUBJECT","ATTACH","FORMAT","BODY","F1","F2","F3","ATTR")
 asFMT_MAIL_SMTP=("SMTP.USER","SMTP.PASSWORD","SMTP.SERVER", "SMTP.PORT", "SMTP.SSL")
@@ -253,7 +259,7 @@ class NC_Mail:
         
         # Verifica PROM
         ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Verifica indirizzi mail, FROM", sProc)        
-        sTemp=ntSys.iif(ntSys.NF_StrIsEmail(self.sFrom),"","FROM: " + self.sFrom)
+        sTemp=ntSys.iif(NF_StrIsEmail(self.sFrom),"","FROM: " + self.sFrom)
         sResult=ntSys.NF_StrAppendExt(sResult, sTemp)
         
         # Verifica TO, CC, BCC
@@ -263,7 +269,7 @@ class NC_Mail:
                 for sMail in self.dictREC2[sType]:
                     if ntSys.NF_NullToStr(sMail) != "":
                         ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, ": Verifica " + sType + " " + sMail, sProc)
-                        sTemp=ntSys.iif(ntSys.NF_StrIsEmail(sMail),"", sType + ": " + str(sMail) + ", " + str(len(sMail)))
+                        sTemp=ntSys.iif(NF_StrIsEmail(sMail),"", sType + ": " + str(sMail) + ", " + str(len(sMail)))
                         sResult=ntSys.NF_StrAppendExt(sResult, sTemp)
         
         #  Completamento se sResult != ""
@@ -501,7 +507,7 @@ class NC_Mail:
         sProc="MailSendSmtpTxtWithAttach"
         
     # Creazione Message
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Attach da spedire: " + sAttach, sProc)
+        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Attach da spedire: " + self.sAttach, sProc)
         ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Creazione oggetto messaggio", sProc)
         sResult=self.MailMessageCreate()                    
     

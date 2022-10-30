@@ -52,6 +52,60 @@ def NF_INI_Read(sFileINI):
     lResult=[sResult,dictINI]
     return lResult
 
+# INI: Salva 
+# Nomefile già normalizzato. SEMPRE IN SCRITTURA. sE UPDATE USARE NF_INI_Update
+# Passato in forma dict di dict
+# Ritorna sResult
+# -----------------------------------------------------------------------------
+def NF_INI_Write(sFileINI, dictINIs):
+    sProc="NF_INI_Read"
+    sResult=""
+    sGroup=""
+
+# Setup
+    config = configparser.ConfigParser()
+    if ntSys.NF_FileExist(sFileINI): sAttr="a"
+
+# Per tutte le chiavi. Se inizia per #=Nome Sezione
+    for sGroup in NF_DictKeys(dictINIs):
+        dictINI=dictINIs[sGroup]
+        for vKey in NF_DictKeys(dictINI):    
+        # Items    
+            if not config.has_section(sGroup): config.add_section(sGroup)    
+            config.set(sGroup,vKey,dictINI[vKey])
+             
+# Salva File
+    lResult=ntSys.NF_FileOpen(sFileINI,"w")
+    sResult=lResult[0]
+    if sResult==""
+        hFile=lResult[1]
+        config.write(hFile)
+        
+# Ritorno Scrittura
+    sResult=ntSys.NF_ErrorProc(sResult,sProc)
+    return sResult
+
+# INI: Update
+# Se esiste lo legge e update del dict passato come parametro
+# Ritorna sResult
+# -----------------------------------------------------------------------------
+def NF_INI_Update(sFileINI, dictINI):
+    sProc="NF_INI_Update"
+    sResult=""
+    sGroup=""
+
+# Se non Esiste va a INI_Write ed ESCE
+    if ntSys.NF_FileExist(sFileINI): 
+# Legge INI
+        sResult=NF_INI_Read(sFileINI, dictINIs)
+# Merge
+        dictINI=NF_DictMerge2(dictINI, dictINIs)
+# Salva dictINI 
+    sResult=NF_INI_Write(sFileINI, dictINI)        
+# Ritorno Scrittura
+    sResult=ntSys.NF_ErrorProc(sResult,sProc)
+    return sResult
+
 # Read CSV Input in DICT di list. 1,2=Header, 3..N: Record
 # Campi di dictParams
 # TRIM=True/False, DELIMITER=","(def) FILE.IN=, FILE.OUT

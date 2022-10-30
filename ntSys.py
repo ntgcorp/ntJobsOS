@@ -9,8 +9,6 @@ import shutil
 # For NF_PathFind
 import glob
 from sys import platform
-# Lib per CheckEmail
-import re
 # Lib per gestione Replace
 from string import Template
 
@@ -104,14 +102,14 @@ def	NF_FileDelete(sFile,sType="FN"):
     sResult=""
     
 # Flags
-    bDir=ntSys.NF_StrSearch(0,"D") != -1
-    bRic=ntSys.NF_StrSearch(0,"R") != -1
+    bDir=NF_StrFind(0,sType,"D") != -1
+    bRic=NF_StrFind(0,sType,"R") != -1
     
 # Delete
     sResult="Delete file " + sFile + " with error type: " + sType
     try:
-        if bDir and
-            bRic: shutil.rmtree(sFile)
+        if bDir and bRic:
+            shutil.rmtree(sFile)
             sResult=""
         if bDir and bRic==False:
             os.rmdir(sFile)
@@ -119,12 +117,12 @@ def	NF_FileDelete(sFile,sType="FN"):
         if bDir==False:
             os.remove(sFile)
             sResult=""                
-    else:
-        sResult=f"Cancellazione path [sFile], Type: [sType]"
+    except:
+        sResult="Cancellazione path " + sFile + ", Type: " + sType
     
 # Uscita
     sResult=NF_ErrorProc(sResult,sProc)
-    NF_FileDelete=sResult
+    return sResult
     
 # Path.Rename
 def	NF_FileRename(sPathIn, sPathOut):
@@ -134,12 +132,12 @@ def	NF_FileRename(sPathIn, sPathOut):
 # Rename   
     try:
         os.rename(sPathIn, sPathOut)
-    else:
-        sResult=f"Rinomina path [sPathIn] in [sPathOut]"
+    except:
+        sResult="Rinomina path " + sPathIn + " in " + sPathOut
     
 # Uscita
     sResult=NF_ErrorProc(sResult,sProc)
-    NF_FileDelete=sResult
+    return sResult
     
 # Path.Copy/XCopy
 # F=Singolo File P=Path, (F=File), D=Dir
@@ -148,21 +146,21 @@ def	NF_PathCopy(sPathIn, sPathOut, sType="F"):
     sResult=""
     
 # Flags
-    bDir=ntSys.NF_StrSearch(0,"D") != -1
-    bPath=ntSys.NF_StrSearch(0,"P") != -1
-    bFile=(ntSys.NF_StrSearch(0,"F") != -1) or (sType="F")
+    bDir=NF_StrFind(0,sType,"D") != -1
+    bPath=NF_StrFind(0,sType,"P") != -1
+    bFile=(NF_StrFind(0,sType,"F") != -1) or (sType=="F")
 
 # Rename   
     try:
         if bDir: shutil.copytree(sPathIn, sPathOut)
         if bPath: shutil.copyfile(sPathIn, sPathOut)
         if bFile: shutil.copy(sPathIn, sPathOut)
-    else:
-        sResult=f"Copia [sPathIn] in [sPathOut], Type: [sType]"
+    except:
+        sResult="Copia " + sPathIn + " in " + sPathOut + ", Type: " + sType
     
 # Uscita
     sResult=NF_ErrorProc(sResult,sProc)
-    NF_PathCopy=sResult
+    return sResult
     
 # Cerca un Path, anche ricorsivo con jolly e crea un array
 # R=Recursivo
@@ -170,40 +168,33 @@ def	NF_PathCopy(sPathIn, sPathOut, sType="F"):
 def NF_PathFind(sPath, sType=""):
     sProc="NF_PathFind"
     sResult=""
-    asPath=None
+    asPath=[]
     
 # Flag
-    bRec=NF_StrSearch(0,sType,"R") != -1
+    bRec=NF_StrFind(0,sType,"R") != -1
     
 # Ricerca
-    for f in glob.glob(sPath, recursive=bRec):
-        asPath.append(f)
+    for f in glob.glob(sPath, recursive=bRec): asPath.append(f)
     
 # Uscita
     sResult=NF_ErrorProc(sResult,sProc)
     lResult=[sResult, asPath]
-    NF_PathFind=lResult
-
+    return lResult
     
 # PathMake File e Cartella. Non aggiunge "\" alla fine
 def NF_PathMake(sPath, sFile, sExt):
     sResult=""
 # Slash per OS
     sSlash=iif(NF_IsWindows(),"\\","/")
-    
 # Setup
     sResult=sPath
-    
 # Aggiunge File, prima eventuale slash
     bAdd=NF_StrRight(sPath,1) != sSlash
     if sFile != "": sResult = sResult + iif(bAdd,sSlash, "") + sFile
-
 # Aggiunge Ext
-    if sExt != "": sResult = sResult + "." + sExt
-    
+    if sExt != "": sResult = sResult + "." + sExt    
 # Ritorno
-    NF_PathMake=sResult
-    
+    return sResult
 
 # Normalizza Path con verifiche ed estraendo componenti
 # 0=Ritorno, 1=Dir, 2=File, 3=Ext, 4=FileConExt, 5=FileNormalizzato
@@ -248,10 +239,6 @@ def NF_PathNormal(sFileIn):
     lResult=["",sPath,sFile,sExt,sFileExt,sFileIn]
     if NT_ENV_TEST_SYS == True: print (sProc + ": " + str(lResult))
     return lResult
-
-# Crea Path da Dir, File(se presente), Ext(se presente)
-# Non aggiunge "\" alla fine (in base a OS)
-def 
 
 # Tipo di PATH. N=Non Esiste, F=File, D=Dir
 def NF_PathType(sFile):
@@ -366,11 +353,11 @@ def NF_StrFind(nPos, sString, sFind):
     nFind=len(sFind)
     if nPos==-1:
         sString2=NF_StrLeft(sString,nFind)
-        if sString2=sFind: nResult=1
+        if sString2==sFind: nResult=1
     if nPos==1:
         sString2=NF_StrRight(sString,nFind)
-        if sString2=sFind: nResult=len(sString)-nFind
-    elif nPos=0:
+        if sString2==sFind: nResult=len(sString)-nFind
+    elif nPos==0:
         nResult=sString.find(sFind)
         if nResult != -1: nResult=nResult+1
     
@@ -647,7 +634,8 @@ def NF_DictFromArr(asHeader, avData):
 #   lResult[1]: Dict,
 #   Altri: 2=LenHdr, 3=LenData, 4=TypeHDR(se non Array), 5=TypeData(se non Array)
     sProc="NF_DictFromArr"
-    sResult=""    
+    sResult=""
+    dictResult={}
     
 # Verifica Componenti
     lHType=0
@@ -662,12 +650,11 @@ def NF_DictFromArr(asHeader, avData):
         sResult="Tipi diversi header/data, non array"
 
 # Ritorno componenti operazioni
-    lResult=[sResult,None,len(asHeader),lHType,lHData,str(type(asHeader)), str(type(avData))]
+    lResult=[sResult,dictResult,len(asHeader),lHType,lHData,str(type(asHeader)), str(type(avData))]
 
 # Esecuzione
     if bVerify:
         nIndex=0
-        dictResult=dict()
         for sID in asHeader:
             vDato=avData[nIndex]
             dictResult.update({sID: vDato})
@@ -675,7 +662,43 @@ def NF_DictFromArr(asHeader, avData):
         #print ("TEST dictFromArray: " + str(dictResult))        
         lResult=NF_Result2(lResult,sProc,sResult)
     else:
-        NF_Result2(lResult,sProc,sResult)
+        lResult=NF_Result2(lResult,sProc,sResult)
+
+# Merge 2 Dict. Ritorno "copia" di Source+Add
+# ---------------------------------------------------------------------
+def NF_DictMerge(dictSource, dictAdd):
+    
+# Copia
+    dictEnd=dictSource.copy()
+# Per ogni elemento in dictAdd
+    for vKey in NF_DictKeys(dictAdd)
+    # Attribuisce
+        dictEnd[vKey]=dictAdd[vKey]
+
+# Uscita
+    return dictEnd
+
+# Merge 2 Dict(2) dict di dict. Ritorno "copia" di Source+Add
+# ---------------------------------------------------------------------
+def NF_DictMerge2(dictSource, dictAdd):
+
+# Copia
+    dictEnd=dictSource.copy()
+
+# Per ogni dict dentro dictAdd
+    for vKey in NF_DictKeys(dictAdd)
+        dictAdd2=dictAdd[vKey]
+    # Cerca se esiste o attribuisce dictAdd
+        if NF_DictExist(dictSource,vKey):
+            dictSource2=dictSource[vKey]
+        else:
+            dictSource2=dictAdd
+    # Merge
+        dictMerge=NF_DictMerge(dictSource2, dictAdd2)
+        dictEnd[vKey]=dictMerge
+        
+# Uscita
+    return dictEnd
     
 # Uscita
     lResult[1]=dictResult
