@@ -1,35 +1,30 @@
 ------------------- ntJobsPy Framework -----------------------------
-
 - Layer Sistema Operativo ntJobs
 ntSys.py: Libreria Base ntJobs. Richiamata da tutti i moduli
-ntDataFiles.py: Libreria gestione INI/CSV/JSON. 
+ntDataFiles.py: Libreria gestione INI/CSV 
+ntDataJson.py: Libreria gestione INI/CSV estensione per ntDataFiles
 ntDate.py: Libreria gestione DATE
 ntDataJobs: Libreria gestione Dati in Json
 ntMailClass.py: Libreria Mailing - Singola Mail - Usata da ntMail ed altri
 ntTableClass.py: Libreria gestione Array come Tabella
 ntJobsClass.py: Orchestratore Processi (core ntJobsOS)
+ntJobsIO.py: Funzioni di Interfaccia di un modulo FrontEnd verso ntJobsOS. Lettura Input, Scrittura Ritorno
+ntPdfClass.py: PDF Class gestione semplificata
 ntJobs.py: Avvio ntJobs
 
---------------------  Cartelle ---------------------
-Temp: Cartella di lavoro JOBS e ntJibs
-Users: Cartella share per ogni utente (ftp o altro)
+------------------------------  Cartelle ----------------------------
+Temp    : Cartella di lavoro JOBS e ntJibs
+Users   : Cartella share per ogni utente (ftp o altro)
 Versioni: Vecchie Versioni
-Inbox: Usato da JOBS per job in ingresso da users o altro
-Archive: Usato da JOBS per archiviare i JOBS
-Support: Documenti di supporto ntJobs
-Media: Media di suporto
-Data: File di Dati di supporto
-Outbox: File in uscita generati da Jobs (anche questi poi vanno in Archive
-Log: Log Attività
+Inbox   : Usato da JOBS per job in ingresso da users o altro
+Archive : Usato da JOBS per archiviare i JOBS
+Support : Documenti di supporto ntJobs
+Media   : Media di suporto
+Data    : File di Dati di supporto
+Outbox  : File in uscita generati da Jobs (anche questi poi vanno in Archive
+Log     : Log Attività
+Test    : Script e Dati di Test
 
-- Layer Jobs+FrontEnd: Esecuzione componenti del sistema lato utente o schedulazione
------- IN DEFINIZIONE --------------------------
-ntJ_Get.py: Schedulazione. Ciclo di ricerca JOB in SHARE
-ntJ_Exec: Schedulazione. Ricerca se sono pervenuti JOB in Inbox ed esegue
-ntJ_Return: Eseguita su schedulazione. Ricerca se sono stati eseguiti JOB, invia mail, sposta in Archiviazione
-ntC_Check: Comandi Check Live. ACTION=START/END/LIVE/CHECK[SOLO API=ADMIN] API= TAG= DATETIME= NOTE=
-ntF_WWW.py: Programma WebServer che crea jobs.ini se arrivano comandi jobs via FORM.
-ntJ_GetWS.py:Programma WebService che crea jobs.ini se arrivano comandi jobs
 
 
  

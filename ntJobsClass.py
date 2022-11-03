@@ -15,45 +15,46 @@
 
 # Per Wait ed altro
 import ntSys, ntDataFiles, ntTableClass
-
-asFMT_JOBS_USERS=("USERID","USERPASSWORD","USERNAME","USERNOTES","USERGROUPS","USERPATHS","USERMAIL","USERACTIONS")
-asFMT_JOBS_GROUPS=("GROUPID","GROUPNAME","GROUPNOTES")
-asFMT_JOBS_ACTIONS=("ACTIONID","ACTIONNAME","ACTIONGROUPS","ACTIONSCRIPT","ACTIONENABLED","ACTIONUSERS","ACTIONPATH","ACTIONORDER","ACTIONTIPS","ACTIONHELP")
-
+                                    
 NT_ENV_TEST_JOBS=True
-JOBS_CFG=0
-JOBS_ACT=1
-JOBS_USR=2
-JOBS_USG=3
-asPath=[]
 
 # ----------------------------- CLASSI ---------------------------
 # ntJobs System Class APP + LOGF
-class NC_Jobs:
 # ID dictUsers="ID"(id_utente), dictActions=ID(idAction). Poi Array con camp
-    
+class NC_Jobs:
+# Risultato ultima elaborazione
     sResult=""
+# File INI jobs.ini letto (che può contenere più jobs) compreso [CONFIG] di login ed altro
+    dictJobsINI=dict()
+# Job Singolo     
     dictJob=dict()
+# Files associati al Job Corrente    
+    asFilesJob=[]    
+# Paths da Leggere
     dictPaths=dict()
-    sFilesJob=[]
+# Tabelle CSV da leggere
     asCSV=["CONFIG","ACTION","USERS","GROUPS"]
-    
+# Oggetto Mail di ritorno
     objMail=None
-    
+# Tabelle Dati Jobs
+    asFMT_JOBS_USERS=("USERID","USERPASSWORD","USERNAME","USERNOTES","USERGROUPS","USERPATHS","USERMAIL","USERACTIONS")
+    asFMT_JOBS_GROUPS=("GROUPID","GROUPNAME","GROUPNOTES")
+    asFMT_JOBS_ACTIONS=("ACTIONID","ACTIONNAME","ACTIONGROUPS","ACTIONSCRIPT","ACTIONENABLED","ACTIONUSERS","ACTIONPATH","ACTIONORDER","ACTIONTIPS","ACTIONHELP")
+    asFMT_JOBS_CONFIG=("ADMIN.EMAIL","SMTP.AUTH","SMTP.FROM","SMTP.PASSWORD","SMTP.PORT","SMTP.SERVER","SMTP.SSL","SMTP.TLS","SMTP.USER","NTJOBS.VER")
+# Tabelle di supporto, ID Tabelle, Array Chiavi Rapide
     asUsers=[]
     asActions=[]
     asGroups=[]
     asConfig=[]
-
+    asPath=[]
     JOB_DAT_INI=0
     JOB_DAT_ACT=1
     JOB_DAT_USR=2
-    JOB_DAT_USG=3
-    
-    tabData[JOB_DAT_INI]=dict()
-    tabData[JOB_DAT_ACT]=NC_Table()
-    tabData[JOB_DAT_USR]=NC_Table()
-    tabData[JOB_DAT_USG]=NC_Table()
+    JOB_DAT_USG=3  
+    tabData[self.JOB_DAT_INI]=dict()
+    tabData[self.JOB_DAT_ACT]=NC_Table()
+    tabData[self.JOB_DAT_USR]=NC_Table()
+    tabData[self.JOB_DAT_USG]=NC_Table()
     
 # Init
 # ------------------------------------------------------------------------------------------------------------
@@ -69,7 +70,7 @@ class NC_Jobs:
         self.sResult=""
 
         # Lettura DATI
-        for nIndex=0 in ntSys.NF_DictLen(self.asCSV)-1:
+        for nIndex in range(0,ntSys.NF_DictLen(self.asCSV)-1):
 
         # NomeFile e Normalizzazione
             sFile="Data/ntjobs_" + asCSV[nIndex] + ".csv"
@@ -131,7 +132,7 @@ class NC_Jobs:
         asPaths=self.tabData[JOB_DAT_USR].GetCol("USERPATHS")
                 
     # Split di tutti i paths e manda su array asResult
-        for sTemp in asPath
+        for sTemp in asPath:
         # Split+Norm
             asPaths=sTemp.split(",")
             asPaths=NF_ArrayNorm(asPaths,"LR")        
@@ -140,7 +141,7 @@ class NC_Jobs:
             if nIndex > 0:
                 sUser=tabData[JOB_DAT_USR].GetValue(nIndex, "USERID")                
         # Per Ogni Path attribuisce user come valore
-            for sPath in asPaths
+            for sPath in asPaths:
                 self.dictPaths[sPath]=sUxdf        
 
 # Get: Ricerca tra i path jobs.ini, lo legge  e lo sposta in inbox insieme ai files associati
@@ -152,7 +153,7 @@ class NC_Jobs:
         self.sResult=""
         
     # Per tutti i Paths Previsti
-        for sPath in ntSys.NF_DictKeys(self.dictPaths)
+        for sPath in ntSys.NF_DictKeys(self.dictPaths):
         # Prende utente associato al path
             sUser=self.dictPaths[sPath]
         # Lista dei files jobs*.ini
@@ -189,7 +190,7 @@ class NC_Jobs:
             self.dictJob=lResult[1]
             self.asFilesJob=[]
             asKeys=ntSys.NF_DictKeys(self.dictJob)
-            for sKey in asKeys
+            for sKey in asKeys:
             # Se lo trova, lo estra, lo Normalizza e lo aggiunge ai file Extra
                 if ntSys.NF_StrSearch("FILE.",sKey,-1):
                     asFileExtra=self.dictJob(sKey)
@@ -203,7 +204,6 @@ class NC_Jobs:
         return sResult
 
 # Sposta i files di un job in cartella Inbox\JOB_ID
-# 
 # Path: Cartella da spostare dove ci deve essere almeno un file jobs.ini ma ci sono anche più jobs
 # Importante ci siano anche i files associati o il processo viene bloccato
     def Jobs_Move(self, dictJob):
@@ -248,14 +248,102 @@ class NC_Jobs:
         return sResult
 
         
-# Exec: 1: Cerca se ci sono JOBS
-# ------------------------------------------------------------------------------------------
+# Exec Action
+# 1: Cerca in Inbox se ci sono jobs da eseguire
+# 2: Per quelli trovati legge jobs.ini nella cartella. SOLO se TROVA JOBS.INI esegue
+# 3: Read jobs.ini
+# 4: Crea file JOBS.RUN
+# 4: Esegue processo con wait o no.
+    def Exec(self):
+        sProc="Job.Exec"
+        sResult=""
+# --------------------------------------------------------------
+    def Exec(self):
+        sProc="Jobs.Exec"
+        sResult=""
+        
+    # Ricerca
+        asFind=self.Jobs_Find("J")
+        sResult=lResult[0]
+        if sResult=="":
+            
+    # Esecuzione
+        # Per ogni cartella...
+            asFind=lResult[1]
+            for sFind in asFind:
+        # Legge Job.INI
+                sResult=self.Jobs_Read(sFind)
+        # Verifica dictJobs
+                if sResult=="":
+                    sResult=self.Exec_Verify(self)
+                else:
+                   self.Jobs_End(sFind) 
+            # Login Utente
+                if sResult=="": sResult=self.Exec_Login(self)                
+            # Esecuzione    
+                if sResult=="": sResult=self.Exec_Run(self)
+    # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        return sResult
+
+# Verifica dictJobs
+    def Exec_Verify(self):
+        sProc="Jobs.Exec.Verify"
+        sResult=""
+        
+# Parametri
+        sUser=self.dictJobs["CONFIG"]["USER"]
+        sPwd=self.dictJobs["CONFIG"]["PASSWORD"]
+            
+# Verifica utente
+        if ntSys.NF_ArrayFind(self.asUsers,sUser)==-1: sResult="User not found " + sUser
+        if sResult=="":
+            sPwd2=self.Jobs_TabDato(JOBS_CFG, "USER", sUser, "PASSWORD")
+            if sPwd2 != sPwd: sResult="User " + sUser + " password invalid"
+
+# Verifica Jobs
+        for asKeys in ntSys.NF_DictKeys(dictJobs):
+            if sKey != "CONFIG":
+                
+
+# Verifica Action e gruppo utente
+        if ntSys.NF_ArrayFind(self.asActions,sAction
+
+    # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        return sResult
+
+
+# Esecuzione Jobs del file ini
+    def Exec_Run(self):
+        sProc="Jobs.Exec.Run"
+        sResult=""
+
+DA COMPLETARE        
+
+    # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        return sResult        
+
+# Trasformazioe in END
+    def Jobs_End(self, sFileJobs, sStatus):
+        sProc="Jobs.End"
+
+    # Crea jobs.end
+        lResult=ntSys.NF_PathScompose(sFileJobs)
+        sFileEnd=ntSys.NF_PathMake(lResult[1],"jobs","end")
+        sResult=ntSys.NF_WileWrite(
+
+DA COMPLETARE
+
+    # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        return sResult        
 
 # Archive & Return
 # --------------------------------------------------------------
-----------------------------
     def Archive(self):
-        sProc="Archive"
+        sProc="Jobs.Archive"
         sResult=""
         sJobEnd=""
         
@@ -268,12 +356,11 @@ class NC_Jobs:
             asFind=lResult[1]
             for sFind in asFind:
             # Legge Job
-                sResult=
+                sResult=self.Jobs_Red(sFind)
             # Email di ritorno
                 sResult=self.Arc_Return(dictJob)
             # Archiviazione
-                if sResult=="":
-                    sResult=self.Arc_Archive(sResult)    
+                if sResult=="": sResult=self.Arc_Archive(sResult)    
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult, sProc)
         self.sResult=sResult
@@ -282,20 +369,17 @@ class NC_Jobs:
     # Cerca Cartelle Job con caratteristiche - Ritorna lResult. Se 0=ERROR, 1=Lista path jobs da arhiviare
     # Type="A"= DaArchiviare, "J": Da Eseguire
     def Jobs_Find(self, sType="J"):
-        sProc="Arc.Return"
+        sProc="Jobs.Arc.Return"
         asResult=[]
         
     # Prende Inbox
         sPathInbox=self.Config("INBOX")
         sPathInboxJ=ntSys.NF_PathMake(sPathInboxJ,"jobs*","")
-        sResult=ntSys.NF_FileExistsErr(sPathInbox):        
+        sResult=ntSys.NF_FileExistsErr(sPathInbox)
         
     # Cerca Path da archiviare. Solo Folder non ricorsivo
-        switch sType:        
-        case "A":
+        if sType=="A":
             sPath="_" + sPath
-        case "E":
-            sPath=nt
         lResult=ntSys.NF_PathFind(sPath,"DN")
         
     # Uscita
@@ -310,8 +394,12 @@ class NC_Jobs:
 
     # Uscita
         return sResult
+
+# Estrae Dato da Tabelle
+    def Jobs_TabDato(self, nID_TAB, sKey, sKeyValue, sField):
+        vResult=self.
     
-# Ritorno MAIL ed eventuale LOG    
+# Ritorno MAIL ed eventuale LOG
     def Jobs_Return(self, dictReturn):
         sProc="Jobs.Return"
         sResult=""
@@ -326,17 +414,16 @@ class NC_Jobs:
         if sType=="A":
             sSubject="Completamento Job: " + sJobID
             sBody = sSubject + ", archiviato job."
-        else
+        else:
             sSubject="Errore lettura job in file " + sPath
-            sBody = sSubject + "\n" + sReturn.
+            sBody = sSubject + "\n" + sReturn
         
     # Invia Mail
-        sResult=Jobs_MailInit()
+        sResult=self.Jobs_Mail_Init()
         if sResult=="":
-            dictMail=
-            {
-                "TO": sUser
-                "SUBJECT": sSubject
+            dictMail={
+                "TO": sUser,
+                "SUBJECT": sSubject,
                 "BODY": sBody                                
             }
             sResult=self.objMail.Send(dictMail)    
@@ -345,7 +432,7 @@ class NC_Jobs:
         return sResult
     
 # Inizializzazione ambiente mail
-    def MailInit(self):
+    def Mail_Init(self):
         sProc="Jobs.Mail.Init"
         sResult=""
         
@@ -374,23 +461,11 @@ class NC_Jobs:
         if ntSys.NF_ArrayFind(sKey,self.asConfig)>-1:
             vValue=self.tabData[JOB_DAT_INI][sKey]
         return vValue
-    
-# Exec Action
-# 1: Cerca in Inbox se ci sono jobs da eseguire
-# 2: Per quelli trovati legge jobs.ini nella cartella. SOLO se TROVA JOBS.INI esegue
-# 3: Read jobs.ini
-# 4: Crea file JOBS.RUN
-# 4: Esegue processo con wait o no.
-    def Exec(self):
-        sProc="Job.Exec"
-        sResult=""
-        
-    # Uscita
-		return sResult
-        
+           
 # End Action
 # 1: Cerca in Inbox se ci sono jobs da eseguire
 # 2: Se trova jobs.end rinomina cartella con "_" davanti per indicare che è da archiviare
+# -------------------------------------------------------------------------------------------------------
     def End(self):
         sProc="Job.End"
         sResult=""
@@ -402,13 +477,12 @@ class NC_Jobs:
     # Cancellazione e Rinomina
         if sResult=="":
             asPathInboxJ=lResult[1]
-            for sPathInBoxJ=sPathInbox
-            
-                sResult=End_Archive(sPathInboxJ)
+            for sPathInBoxJ=sPathInbox:            
+                sResult=ntSys.NF_StrAppendExt(sResult,End_Archive(sPathInboxJ))
                                         
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult, sProc)
-		return sResult
+	return sResult
 
 # Sottofunzione di Job.End, cerca jobs.end. se lo trova 
     def End_Archive(self, sPathInboxJ):
@@ -424,3 +498,4 @@ class NC_Jobs:
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult, sProc)
 		return sResult
+        
