@@ -11,6 +11,7 @@ import glob
 from sys import platform
 # Lib per gestione Replace
 from string import Template
+
 # Per Wait ed altro
 import time, locale
 from datetime import datetime
@@ -38,25 +39,6 @@ def NF_FileExistErr(sFilename):
     sResult=iif(NF_FileExist(sFilename),"","Esistenza file " + sFilename)
     return sResult
 
-# Open File
-def NF_FileOpen(sFilename,sAttr):
-    sResult=""
-    sProc="File.Open"
-
-# Apertura
-    try:
-        hFile = open(sFilename, mode=sAttr, encoding=NT_ENV_ENCODING)
-    except:
-        sResult="Apertura file modo " + sAttr + ", " + sFilename
-        
-# Uscita
-    sResult=NF_ErrorProc(sResult,sProc)
-    if sResult=="":
-        lResult=[sResult,hFile]
-    else:
-        lResult=[sResult,None]
-    return lResult
-
 # Alias File Exist
 def NF_FileExist(sFilename):
     return os.path.exists(sFilename)
@@ -70,20 +52,19 @@ def NF_FileToStr(sText, sFilename, sAttr):
 # Verifica parametri
     if NF_ArrayFind(("w","a"), sAttr)<0: sResult="parametro: " + sAttr
 
-# Apertura File
-    lResult=NF_FileOpen(sFilename,sAttr)
-    sResult=lResult[0]
-    
-# Write string to file
-    if sResult=="":
-        hFile=lResult[1]
-        try:
-            hFile.write(sText)
-        except:
-            sResult="scrittura su file aperto " + sAttr + ", " + sFilename
-    # Close file
-        hFile.close()
+# Open Text File
+    try:
+        hFile = open(sFilename, mode=sAttr, encoding=NT_ENV_ENCODING)
+    except:
+        sResult="apertura file con attributo " + sAttr + ", " + sFilename
 
+# Write string to file
+    try:
+        hFile.write(sText)
+    except:
+        sResult="scrittura su file aperto " + sAttr + ", " + sFilename
+# Close file
+        hFile.close()
 # Uscita
     return NF_StrTestResult(sResult,sProc)
 
@@ -654,7 +635,7 @@ def NF_DictFromArr(asHeader, avData):
 #   Altri: 2=LenHdr, 3=LenData, 4=TypeHDR(se non Array), 5=TypeData(se non Array)
     sProc="NF_DictFromArr"
     sResult=""
-    dictResult=dict()
+    dictResult={}
     
 # Verifica Componenti
     lHType=0
@@ -690,7 +671,7 @@ def NF_DictMerge(dictSource, dictAdd):
 # Copia
     dictEnd=dictSource.copy()
 # Per ogni elemento in dictAdd
-    for vKey in NF_DictKeys(dictAdd):
+    for vKey in NF_DictKeys(dictAdd)
     # Attribuisce
         dictEnd[vKey]=dictAdd[vKey]
 
@@ -699,16 +680,16 @@ def NF_DictMerge(dictSource, dictAdd):
 
 # Merge 2 Dict(2) dict di dict. Ritorno "copia" di Source+Add
 # ---------------------------------------------------------------------
-def NF_DictMerge2(dictSource, dictAdd):   
+def NF_DictMerge2(dictSource, dictAdd):
 
 # Copia
     dictEnd=dictSource.copy()
 
 # Per ogni dict dentro dictAdd
-    for vKey in NF_DictKeys(dictAdd):
+    for vKey in NF_DictKeys(dictAdd)
         dictAdd2=dictAdd[vKey]
     # Cerca se esiste o attribuisce dictAdd
-        if NF_DictExistKey(dictSource,vKey):
+        if NF_DictExist(dictSource,vKey):
             dictSource2=dictSource[vKey]
         else:
             dictSource2=dictAdd
@@ -717,7 +698,11 @@ def NF_DictMerge2(dictSource, dictAdd):
         dictEnd[vKey]=dictMerge
         
 # Uscita
-    return dictEnd    
+    return dictEnd
+    
+# Uscita
+    lResult[1]=dictResult
+    return lResult
 
 def NF_IsDict(dictParams):
     return (type(dictParams)==type(dict()))
@@ -836,46 +821,30 @@ def NF_Wait(nSecondi):
     time.sleep(nSecondi)            
 
 # ----------------------- CLASSI ---------------------------
+#
 # ntJobs System Class APP + LOG
 class NC_Sys:
-# ID_APP  
-    sID=""    
+# ID  APP  
+    sID=""
 # File di LOG Globale    
     sLogFile=""
     sLogTag=""
     sLogToFile=False
     sLogProc=""
-# Application Path    
-    sSys_Path=""
-    sJob_Path=""
-    sJob_File=""
-# TimeStamp
-    sTS_Start=None
-    sTS_End=None
     
-# Metodi
-# ---------------------------------------------------------
+# Init
     def __init__(self,sID_set):        
-        locale.setlocale(locale.LC_ALL, "it_IT.UTF8")
         self.sID=sID_set
+        sTemp="Log\\" + self.sID + ".log"
+        lResult=NF_PathNormal(sTemp)
         self.sLogFile=lResult[5]
-        self.sTS_Start=NF_TS_ToStr()
-        self.sSys_Path=os.getcwd()
-        sTemp=self.sSys_Path + "\\Log\\" + self.sID + ".log"        
+        locale.setlocale(locale.LC_ALL, "it_IT.UTF8")
         
-    # Imposta JOB corrente eseguito - Path
-    def SetJob(self,sFileJob):
-        lResult=ntSys.NF_PathNormal(sFileJob)
-        self.sJob_Path=lResult[1]
-        self.sJob_File=sFileJob
-        
-    # Attributi     
     def LogAttr(self, sAttr, vValue):
         if sAttr=="P": self.sLogProc=vValue
         elif sAttr=="T": self.sLogTag=vValue
         elif sAttr=="F": self.sLogToFile=vValue
         
-    # Scrive Riga LOG
     def Log(self, sLog):
         sText=f"{self.sID}.{self.sLogProc}.{self.sLogTag}"
         sText=sText + NF_TS_ToStr() + ": " + sLog

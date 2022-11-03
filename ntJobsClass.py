@@ -15,15 +15,26 @@
 
 # Per Wait ed altro
 import ntSys, ntDataFiles, ntTableClass
-                                    
+
+asFMT_JOBS_USERS=("USERID","USERPASSWORD","USERNAME","USERNOTES","USERGROUPS","USERPATHS","USERMAIL","USERACTIONS")
+asFMT_JOBS_GROUPS=("GROUPID","GROUPNAME","GROUPNOTES")
+asFMT_JOBS_ACTIONS=("ACTIONID","ACTIONNAME","ACTIONGROUPS","ACTIONSCRIPT","ACTIONENABLED","ACTIONUSERS","ACTIONPATH","ACTIONORDER","ACTIONTIPS","ACTIONHELP")
+
 NT_ENV_TEST_JOBS=True
+JOBS_CFG=0
+JOBS_ACT=1
+JOBS_USR=2
+JOBS_USG=3
+asPath=[]
 
 # ----------------------------- CLASSI ---------------------------
 # ntJobs System Class APP + LOGF
-# ID dictUsers="ID"(id_utente), dictActions=ID(idAction). Poi Array con camp
 class NC_Jobs:
+# ID dictUsers="ID"(id_utente), dictActions=ID(idAction). Poi Array con camp
+
 # Risultato ultima elaborazione
     sResult=""
+
 # File INI jobs.ini letto (che può contenere più jobs) compreso [CONFIG] di login ed altro
     dictJobsINI=dict()
 # Job Singolo     
@@ -36,25 +47,20 @@ class NC_Jobs:
     asCSV=["CONFIG","ACTION","USERS","GROUPS"]
 # Oggetto Mail di ritorno
     objMail=None
-# Tabelle Dati Jobs
-    asFMT_JOBS_USERS=("USERID","USERPASSWORD","USERNAME","USERNOTES","USERGROUPS","USERPATHS","USERMAIL","USERACTIONS")
-    asFMT_JOBS_GROUPS=("GROUPID","GROUPNAME","GROUPNOTES")
-    asFMT_JOBS_ACTIONS=("ACTIONID","ACTIONNAME","ACTIONGROUPS","ACTIONSCRIPT","ACTIONENABLED","ACTIONUSERS","ACTIONPATH","ACTIONORDER","ACTIONTIPS","ACTIONHELP")
-    asFMT_JOBS_CONFIG=("ADMIN.EMAIL","SMTP.AUTH","SMTP.FROM","SMTP.PASSWORD","SMTP.PORT","SMTP.SERVER","SMTP.SSL","SMTP.TLS","SMTP.USER","NTJOBS.VER")
+
 # Tabelle di supporto, ID Tabelle, Array Chiavi Rapide
     asUsers=[]
     asActions=[]
     asGroups=[]
     asConfig=[]
-    asPath=[]
     JOB_DAT_INI=0
     JOB_DAT_ACT=1
     JOB_DAT_USR=2
     JOB_DAT_USG=3  
-    tabData[self.JOB_DAT_INI]=dict()
-    tabData[self.JOB_DAT_ACT]=NC_Table()
-    tabData[self.JOB_DAT_USR]=NC_Table()
-    tabData[self.JOB_DAT_USG]=NC_Table()
+    tabData[JOB_DAT_INI]=dict()
+    tabData[JOB_DAT_ACT]=NC_Table()
+    tabData[JOB_DAT_USR]=NC_Table()
+    tabData[JOB_DAT_USG]=NC_Table()
     
 # Init
 # ------------------------------------------------------------------------------------------------------------
@@ -286,33 +292,26 @@ class NC_Jobs:
         sResult=ntSys.NF_ErrorProc(sResult, sProc)
         return sResult
 
-# Verifica dictJobs
-    def Exec_Verify(self):
-        sProc="Jobs.Exec.Verify"
+    def Exec_Login(self):
+        sProc="Jobs.Exec.Login"
         sResult=""
-        
-# Parametri
-        sUser=self.dictJobs["CONFIG"]["USER"]
-        sPwd=self.dictJobs["CONFIG"]["PASSWORD"]
-            
-# Verifica utente
-        if ntSys.NF_ArrayFind(self.asUsers,sUser)==-1: sResult="User not found " + sUser
-        if sResult=="":
-            sPwd2=self.Jobs_TabDato(JOBS_CFG, "USER", sUser, "PASSWORD")
-            if sPwd2 != sPwd: sResult="User " + sUser + " password invalid"
 
-# Verifica Jobs
-        for asKeys in ntSys.NF_DictKeys(dictJobs):
-            if sKey != "CONFIG":
-                
-
-# Verifica Action e gruppo utente
-        if ntSys.NF_ArrayFind(self.asActions,sAction
+DA COMPLETARE        
 
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult, sProc)
         return sResult
 
+# Verifica dictJobs
+    def Exec_Verify(self):
+        sProc="Jobs.Exec.Verify"
+        sResult=""
+
+DA COMPLETARE
+
+    # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        return sResult
 
 # Esecuzione Jobs del file ini
     def Exec_Run(self):
@@ -394,10 +393,6 @@ DA COMPLETARE
 
     # Uscita
         return sResult
-
-# Estrae Dato da Tabelle
-    def Jobs_TabDato(self, nID_TAB, sKey, sKeyValue, sField):
-        vResult=self.
     
 # Ritorno MAIL ed eventuale LOG
     def Jobs_Return(self, dictReturn):
@@ -419,7 +414,7 @@ DA COMPLETARE
             sBody = sSubject + "\n" + sReturn
         
     # Invia Mail
-        sResult=self.Jobs_Mail_Init()
+        sResult=Jobs_MailInit()
         if sResult=="":
             dictMail={
                 "TO": sUser,
@@ -432,7 +427,7 @@ DA COMPLETARE
         return sResult
     
 # Inizializzazione ambiente mail
-    def Mail_Init(self):
+    def MailInit(self):
         sProc="Jobs.Mail.Init"
         sResult=""
         
@@ -498,4 +493,3 @@ DA COMPLETARE
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult, sProc)
 		return sResult
-        

@@ -64,11 +64,12 @@ def NF_INI_Write(sFileINI, dictINIs):
 
 # Setup
     config = configparser.ConfigParser()
+    if ntSys.NF_FileExist(sFileINI): sAttr="a"
 
 # Per tutte le chiavi. Se inizia per #=Nome Sezione
-    for sGroup in ntSys.NF_DictKeys(dictINIs):
+    for sGroup in NF_DictKeys(dictINIs):
         dictINI=dictINIs[sGroup]
-        for vKey in ntSys.NF_DictKeys(dictINI):    
+        for vKey in NF_DictKeys(dictINI):    
         # Items    
             if not config.has_section(sGroup): config.add_section(sGroup)    
             config.set(sGroup,vKey,dictINI[vKey])
@@ -76,11 +77,9 @@ def NF_INI_Write(sFileINI, dictINIs):
 # Salva File
     lResult=ntSys.NF_FileOpen(sFileINI,"w")
     sResult=lResult[0]
-    if sResult=="":
+    if sResult==""
         hFile=lResult[1]
         config.write(hFile)
-    # Chiusura file
-        hFile.close()
         
 # Ritorno Scrittura
     sResult=ntSys.NF_ErrorProc(sResult,sProc)
@@ -93,18 +92,16 @@ def NF_INI_Write(sFileINI, dictINIs):
 def NF_INI_Update(sFileINI, dictINI):
     sProc="NF_INI_Update"
     sResult=""
-    
+    sGroup=""
+
 # Se non Esiste va a INI_Write ed ESCE
     if ntSys.NF_FileExist(sFileINI): 
 # Legge INI
-        lResult=NF_INI_Read(sFileINI)
-        sResult=lResult[0]
-        if sResult=="":
-            dictINIs=lResult[1]
-        # Merge
-            dictINI=ntSys.NF_DictMerge2(dictINI, dictINIs)
-        # Salva dictINI 
-            sResult=NF_INI_Write(sFileINI, dictINI)        
+        sResult=NF_INI_Read(sFileINI, dictINIs)
+# Merge
+        dictINI=NF_DictMerge2(dictINI, dictINIs)
+# Salva dictINI 
+    sResult=NF_INI_Write(sFileINI, dictINI)        
 # Ritorno Scrittura
     sResult=ntSys.NF_ErrorProc(sResult,sProc)
     return sResult
@@ -112,7 +109,7 @@ def NF_INI_Update(sFileINI, dictINI):
 # Read CSV Input in DICT di list. 1,2=Header, 3..N: Record
 # Campi di dictParams
 # TRIM=True/False, DELIMITER=","(def) FILE.IN=, FILE.OUT
-# FIELDS[ucase,trimmto]. Se specificato viene utilizzato come confronto con quello da leggere
+# FIELDS[ucase,trimmato]. Se specificato viene utilizzato come confronto con quello da leggere
 # Se CSV_Append viene usato come confronto con quello da appendere
 # Il file deve già essere normalizzato
 # Ritorna lResult. 0=RitornoStr, 1=Campi, 2=SchemaCompleto(OPZIOMALE o None), 3=dictTableCSV
@@ -122,8 +119,9 @@ def NF_CSV_Read(dictParams):
     sProc="CSV_READ"
     sResult=""
     nLineaRead=0
-    dictSchema=None
-    dictTable=[]
+    lResult=[]
+    dictSchema=dict()
+    dictTable=dict()
     asHeader=[]
     
 # Legge Parametri    
@@ -177,7 +175,7 @@ def NF_CSV_Read(dictParams):
 # Legge solo Header CSV. FILE.IN
 # Ritorno lResult 0=Result, 1=HeaderArrayStr
 # Se FIELDS già avvalorato, allora VERIFICA che l'Header letto corrisponda a quello di FIELD
-# FILE.IN deve già essere normalizzato
+# IN.FILE deve già essere normalizzato
 # ------------------------------------------------------------------------------------------
 def NF_CSV_Header(dictParams):
     sProc="CSV_HEADER"
