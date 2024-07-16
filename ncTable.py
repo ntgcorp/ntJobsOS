@@ -1,66 +1,153 @@
-# Classe Table in Array. Correlato a CSV
-# -----------------------------------------------------------
+# Classe Table in Array 2x 1=Record, 2=ColonneInRecord. Correlato a CSV
+# Gestione di record cancellati, Ordinamento tramite campo chiave o singolo campo,
+# inserimento, cancellazione di record, compattazione, Sort Chiave/Tabella/Campo
+# Campo Indice OBBLIGATORIO (eventualmente creare un campo ID progressivo con range())
+# Nomi dei campi "case sensitive" e ora ricerche "case sensitive"
+# Gestione OBBLIGATORIA con un Index che serve a tener conto ordinamento e record cancellati.
+# Con Sort() avviene anche IndexUpdate
+# DA COMPLETARE
+# - SORT
+# - Load/Save tabella da DB (sqLite/mySql) gestito solo da classe NC_DB
+# History:
+# 202308: Prima versione
+# 202407: Aggiunto GetRecord
+# -----------------------------------------------------------------------------
 import nlSys, nlDataFiles
 from nlDataFiles import NC_CSV
+
 class NC_Table:
 # Campi
-    avData=[]
-    avFields=[]
-    sFieldKey=""
+    avData=[]      # Tabella
+    avFields=[]    # Nomi dei Campi (correlato a sFieldKey)
+    sFieldKey=""   # Campo Chiave - DEVE ESSERE PRESENTE in avFields
+    sResult=""     # Stato Interno. ""=OK, Altrimenti ERRORE
+    IndexKey=-1    # Posizione Campo Indice in avFields- OBBLIGATORIO SPECIFICARLO E CHE SIA TRA I FIELDS
+    dictIndex={}   # Indice Chiave->Indice (al netto dei record cancellati). Aggiornato con IndexUpdate()
 
-# Set Valore in Matrice in base a KeyValue - Ritorna sResult
+# Inizializzazione
 # -----------------------------------------------------------------------------
-    def Set(self, vKeyValue, sField, vValue):
-        sProc="Table.Set"
+    def __init__(self, asFields, sFieldKey):
+        sProc="Table.Init"
 
-    # 2 Indici
-        nIndex=self.Index(self.sFieldKey,sKeyValue)
-        lResult=self.IndexField2(sKeyValue)
-        nIndexField=lResult[1]
-        sResult=lResult[0]
-        if nIndex==-1: sResult=ntSys.NF_StrAppendExt(sResult, "Value non trovato: " + sKey)
+        self.asFields=asFields
+        self.avData=[]
+        self.sFieldKey=sFieldKey
+        self.nIndexKey=nlSys.NF_ArrayFind(self.asFields,self.sFieldKey)
+        if nlSys.NF_ArrayLen(self.asFields): self.sResult="Invalid Array Fields"
+        if self.nIndexKey == -1: self.sResult="Key name not valid: " + sFieldKey
 
-    # Set o Errori
-        if (sResult==""): avData[nIndex][nIndexField]=vValue
+# Set Valore in Matrice in base a KeyValue - Ritorna sResult. Singola cella
+# -----------------------------------------------------------------------------
+    def SetValue(self, vKeyValue, sField, vValue):
+        sProc="Table.Set.Value"
+
+    # Trova Riga
+        nIndex=self.Find(vKeyValue)
+        if nIndex==-1: sResult="Key Value non trovato: " + str(vKeyValue)
+
+    # Trova Riga con Index
+        if sResult == "":
+            lResult=self.IndexField2(sField)
+            nIndexField=lResult[1]
+            sResult=lResult[0]
+
+    # Set Valore in Riga,Campo
+        if sResult == "": avData[nIndex][nIndexField]=vValue
 
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
+        return sResult
+
+# Set Valore in Matrice in base a Valore Campo Chiave Per Riga e Poi Altro Camp - Ritorna sResult. Singola cella
+# -----------------------------------------------------------------------------
+    def SetMatrix(self, sKeyName, vKeyValue, sField, vValue):
+        sProc="Table.Set.Matrix"
+
+    # Trova Riga
+        nIndex=self.Find(vKeyValue)
+        if nIndex==-1: sResult="Key Value non trovato: " + str(vKeyValue)
+
+    # Set Field in riga
+        if sResult == "":
+            lResult=self.IndexField2(sField)
+            nIndexField=lResult[1]
+            sResult=lResult[0]
+
+    # Set o Errori
+        if (sResult == ""): avData[nIndex][nIndexField]=vValue
+
+    # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
+        return sResult
+
+# Index Update - Verifica che non ci siano chiavi doppie
+# -----------------------------------------------------------------------------
+    def IndexUpdate():
+    # Recupera Posizione CampoChiave + Reset dictIndex
+        nIndexKey=self.nIndexKey
+        self.dictIndex={}
+    # Ricostruisce dizionario indice
+        for nF1 in range(0,self.Len()-1):
+            sKey=self.avTable[nF1][nIndexKey]
+            if ntSys.NF_DictExists(dictIndex,sKey):
+                self.dictIndex[sKey]=nF1
+            else:
+                sResult="Error key exist: " + sKey
+                break
+    # Fine
         return sResult
 
 # Set Array Righe x Colonne - Ritorna sResult
+# Parametri:
+# avTable: Array Righe/Colonne Dati
+# asFields: Nomi dei campi
+# asFieldIndex: Nome del campo Index "obbligatorio"
+# DA COMPLETARE CON VERIFICHE
 # -----------------------------------------------------------------------------
-    def SetArray(self, avTable):
+    def SetArray(self, avTable, asFields, sFieldIndex):
         sProc="Table.SetArray"
 
-    # Check & Set
-        nIndex=len(avTable)
+    # Verifiche
+        nIndex=len(self.avTable)
+
         if nIndex != -1:
             self.avData=avTable.copy()
+            self.IndexUpdate()
         else:
             sResult="Index errato source"
 
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
         return sResult
 
 # Set Singola Riga. Ritorna sResult
+# Se Chiave non esiste effettua un Append.
+# Elementi devono essere stessa dimensione Record o ritorna Errore
 # -----------------------------------------------------------------------------
-    def SetRowArray(self, sKey, avTable):
-        sProc="Table.SetRowArray"
+    def SetRow(self, avTable):
+        sProc="Table.SetRow"
         sResult=""
 
-    # Ricerca Indice e controllo dimensione riga
-        nIndex=self.Index(sKey)
-        if nIndex<1: sResult="Non trovata key " + str(sKey)
+    # Verifica dimensione Record da modificare o aggiiungere
         if ntSys.NF_ArrayLen(avTable) != ntSys.NF_ArrayLen(self.asFields): sResult="Dimensione diversa n.valori e n.campi " + str(avTable)
 
-    # Set
-        for sField in asFields:
-            sResult=self
-        self.avData=avTable.copy()
-
+    # Ricerca Riga
+        if sResult=="":
+            sKey=avTable[self.nIndexKey]
+            nIndex=self.Find(sKey)
+    # Aggiung Riga o sostituisce
+            if nIndex==-1:
+                sResult=self.Append(avTable)
+                # Update Index
+                if self.bIndex: self.dictIndex[sKey]=self.len()-1
+            else:
+                self.avData[nIndex]=avTable.copy()
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
         return sResult
 
 # Get in Matrice. Ritorna lResult, 0=Result, 1=Valore
@@ -68,20 +155,18 @@ class NC_Table:
     def Get(self, sKey, vKeyValue, nIndex):
         sProc="Table.Get"
         sResult=""
-        vValue=None
-
+        vValue=""
     # Ricerca Indice e controllo dimensione riga. Controllo indice non
         lResult=self.IndexField2(sKey)
         sResult=lResult[0]
         nIndexField=lResult[1]
     # Test Index
         sResult=ntSys.NF_StrAppendText(sResult,self.IndexTest(nIndex))
-
     # GetValore
         if sResult=="": vValue=self.avData[nIndex][nIndexField]
-
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
         lResult=[sResult,vValue]
         return sResult
 
@@ -103,9 +188,52 @@ class NC_Table:
             lResult=[sResult,""]
 
     # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
         return sResult
 
-# Get in Matrice. Ritorna lResult, 0=Result, 1=Valore
+# Get Record. In base a key=keyValue ritorna dict con campo=valore
+# Ritorna lResult. 0=Errore, 1=Posizione Record Trovato 0..N-1, -1=NonTrovato, 2=record come dict
+# Parametri, key, KeyValue, Opzionali: type=(0=key, 1=index)
+# -----------------------------------------------------------------------------
+    def GetRecord(self, vKey, sKeyValue, **kwargs):
+        sProc="Table.Get.Record"
+        sResult=""
+        dictRecord={}
+        nType=0
+
+# Argomenti opzionali
+        for key, value in kwargs.items():
+            if key=='type':
+                nType=value
+
+    # Ricerca INDICE RECORD
+        if nType==1:
+            nIndex=vKey
+        else:
+            lResult=self.Index(sKey,vKeyValue)
+            sResult=lResult[0]
+            if sResult=="": nIndex=lResult[1]
+
+    # Estrazione Record CON INDICE
+        if sResult=="" and (nIndex>-1):
+            lResult=self.GetRow(nIndex)
+    # Conversione Record in dict
+        if sResult=="":
+            lResult=nlSys.NF_DictFromArr(self.Keys(),avData)
+            sResult=lResult[0]
+    # Prende Record
+        if sResult=="":
+            dictRecord=lResult[1].copy
+
+    # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
+        lResult=[sResult,nIndex,dictRecord]
+        return lResult
+
+
+# Get in Matrice. Ritorna lResult, 0=sResult, 1=Array di Valori di una riga
 # -----------------------------------------------------------------------------
     def GetRow(self, nIndex):
         sProc="Table.Get.Row"
@@ -119,6 +247,7 @@ class NC_Table:
 
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
         lResult=[sResult,vValue]
         return lResult
 
@@ -139,36 +268,42 @@ class NC_Table:
                 self.avData[nIndex][nIndexField]=vValue
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
         return sResult
 
-# ???
+# Fill every record with value. Return sResult
 # -----------------------------------------------------------------------------
-    def FillCol(self, sKey, vValue=None):
+    def FillCol(self, sFieldName, vValue=None):
         sProc="Table.Fill.Col"
         sResult=""
 
-   # Test Colonna
-        lResult=self.IndexField2(sKey)
-        nIndexField=lResult[1]
+    # Non per IndexField
+        if (sFieldName==self.sFieldKey): sResult="No FieldKey"
+
+    # Test Colonna
+        lResult=self.IndexField2(sFieldName)
         sResult=lResult[0]
 
     # Set Every Col
-        nRows=self.Len()
-        if (sResult=="") and (nRows>0):
-            for nIndex in range(nRows):
-                self.avData[nIndex][nIndexField]=vValue
+        if sResult=="":
+            nRows=self.Len()
+            if (sResult=="") and (nRows>0):
+                nIndexField=lResult[1]
+                for nIndex in range(nRows):
+                    self.avData[nIndex][nIndexField]=vValue
 
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
         return sResult
 
-# Get Colonna
+# Get Colonna. Return lResult 0=sResult, 1=ArrayRecords_one_field
+# Senza Record Cancellati
 # -----------------------------------------------------------------------------
     def GetCol(self, vKey):
         sProc="Table.Get.Col"
         sResult=""
-        vValue=None
-        vRow=None
+        avRows=[]
 
     # Ricerca Indice e controllo dimensione riga. Controllo key
         lResult=self.IndexField2(vKey)
@@ -181,125 +316,235 @@ class NC_Table:
             for sKey in self.Fields():
                 vRecord=self.avData[nIndexField][nIndex]
                 nIndex = nIndex + 1
-                vRow[nIndex]=vRecord
+                avRows.append(vRecord)
 
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult,sProc)
-        lResult=[sResult,vValue]
+        self.sResult=sResult
+        lResult=[sResult,avRows]
         return lResult
 
-# Append (con controllo ci siano i campi. Ritorna sResult
-# -----------------------------------------------------------------------------
+# Append di un Array alla tabella (con controllo ci sia lo stesso numero di campi. Ritorna sResult)
+# Fa anche UPDATE()
+# ------------------------------------------------------------------------------------------------
     def Append(self, avValues):
         sProc="Table.Row.Add"
         sResult=""
 
     # Verifica len fields
-        if self.FieldsLen()!=ntSys.NF_ArrayLen(avValues): sResult="Dimensione diversa"
+        if self.FieldsLen() != ntSys.NF_ArrayLen(avValues): sResult="Dimensione diversa"
 
-    # Aggiunta
+    # Verifica che la chiave non ci sia già'
+        sKey=nlSys.NF_NullToStr(avValues,self.IndexKey)
+
+    # Aggiunta delle'Array di valori alla tabella
         if sResult == "": self.avData.append(avValues)
+
+    # Aggiorna indice 1: Prende Chiave, Nuova Len, Indice
+        if sResult == "":
+            nNewLen=ntSys.NF_ArrayLen(self.avData)
+
+    # Update
+        sResult=self.Update()
 
     # Uscita
         sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
         return sResult
 
-# Remove Riga
+# Remove Riga in base a Key - Rimuove anche da Indice
 # -----------------------------------------------------------------------------
     def Remove(self, sKey, vKeyValue):
         sProc="Table.Row.Delete"
         nIndex=self.Len()
-    # Ricerca e Rimozio0ne
+
+    # Ricerca e Rimozione
         if nIndex>0:
             nIndex=self.Index(sKey,vKeyValue)
             if nIndex>0:
                 self.avData.remove[nIndex]
+                self.dictIndex.remove(sKey)
         else:
-            sResult="Errore " + str(nIndex)
+            sResult="Errore Array Index " + str(nIndex)
+
     # Ritorno
         sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
         return sResult
 
-# Esiste Riga con Valore Key v -1=No, Oppure >0
+# Cerca Riga Record in Tabella. -1=No, Oppure>=0
 # -----------------------------------------------------------------------------
-    def Index(self, sKey, vKeyValue):
+    def Find(self, vKeyValue):
     # Setup
         nResult=-1
+
     # Ricerca
-        for sField in self.asFields():
-            if sField==sKey:
-                break
-            else:
-                nResult=nResult+1
+        for sField in self.avFields:
+            if sField==sKey: break
+            nResult=nResult+1
 
     # Uscita
         return nResult
 
-# ?????
+# Come Find ma su qualunque campo della Tabella v -1=No, Oppure>=0
+# -----------------------------------------------------------------------------
+    def Index(self, sKey, vKeyValue):
+    # Setup
+        nResult=-1
+
+    # Ricerca
+        for sField in self.avFields:
+            if sField==sKey:
+                break
+            else:
+                nResult=nResult+1
+    # Uscita
+        return nResult
+
+# Come IndexField ma ritorna stringa con errore
 # -----------------------------------------------------------------------------
     def IndexTest(self,nIndex):
+        sProc="TABLE.INDEX.TEST"
         sResult=""
+
         if nIndex<0 or (not ntSys.NF_Range(nIndex, 0, self.Len())): sResult="Valore non trovato: " + str(sKey)
+        sResult=ntSys.NF_ErrorProc(sResult,sProc)
         return sResult
 
-# Trova campo. v. -1=No, Oppure >=0
-# -----------------------------------------------------------------------------
+# Trova numero colonna corrispondente a stringa sKey come nome campo. v. -1=No, Oppure >=0
+# --------------------------------------------------------------------------------------------------
     def IndexField(self, sKey):
     # Indice
-        nIndex=ntSys.NF_ArrayFind(self.Fields(), sKey)
+        nIndex=nlSys.NF_ArrayFind(self.avFields(), sKey)
     # Fine
         return nIndex
 
-# Ritorna come lResult 0=sResult, 1=IndexTrovato
-# -----------------------------------------------------------------------------
+#
+# Come self.IndexField ma invece di numero ritorna lResult (per usi ritorno vari), dove 0=sResult, 1=Index campo
+# -------------------------------------------------------------------------------------------------------
     def IndexField2(self, sKey):
+        sProc="IndexField2"
         sResult=""
-        lResult=self.IndexField(vKey)
-        if nIndexField==-1: sResult="Key non trovato: " + str(sKey)
-        lResult[0]=sResult
-        lResult[1]=nIndexField
+
+        sKey=str(sKey)
+        lResult=self.IndexField(sKey)
+        if nIndexField==-1: sResult="Key non trovato: " + sKey
+
+    # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
+        lResult=[sResult, nIndexField]
         return lResult
 
-# Numero Records
+# Numero Records. -1=NonEsistente 0=Vuoto, Altrimenti >0
 # -----------------------------------------------------------------------------
     def Len(self):
-        if self.avData==None: return -1
-        return len(self.avData)
+        return nlSys.NF_ArrayLen(self.avData)
 
-# Numero Campi
+# Numero Campi. -1=Errore, 0=Vuoto, Altrimenti >0
 # -----------------------------------------------------------------------------
     def FieldsLen(self):
-        return len(self.asFields)
+        return nlSys.NF_ArrayLen(self.asFields)
 
 # Print
 # -----------------------------------------------------------------------------
-    def Print(self):
+    def StrPrint(self):
         sResult=""
         x=0
+        sResult=self.asFields.join(",") + "\n"
         for x in range(self.Len()):
             sResult=ntSys.NF_StrAppendExt(sResult, str(self.avData[x]) + "\n")
         return sResult
 
 # From Table to CSV
+# Ritorno lResult 0=sResult, 1=Oggetto CSV
 # ---------------------------------------------------------------------------------------
     def CSV_TableToDict():
+        sResult=""
+        sProc="TABLE.TO.CSV"
+
     # Conversione
-        objCSV=NC_CSV
+        objCSV=NC_CSV()
         objCSV.asFields = self.Fields
         objCSV.avTable=self.avData
-        objCSV.sFieldKey=self.
+        objCSV.sFieldKey=self.sFieldKey
 
-#  From CSV_DICT to Table
+    # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
+        return [sResult,objCSV]
+
+#  From objCSV to Table
+#  dictTable con 3 Entry. DATA=Dati, HEADER=Campi Header, FIELDKEY=Campo Chiave
+#  Ritorno sResult=Errori eventuali
+#  DA COMPLETARE con CONTROLLI
 # -----------------------------------------------------------------------------
-    def CSV_DictToTable(self, dict):
+    def CSV_DictToTable(self, objCSV):
+        sResult=""
+        sProc="CSV.TO.TABLE"
+
     # Conversione
-        self.avData=dict["DATA"]
-        self.Fields=dict["HEADER"]
+        try:
+            self.avData=objCSV.avTable.copy()
+            self.avFields=objCSV.avFields.copy()
+            self.sFieldKey=objCSV.sFieldKey
+        except:
+            sResult="Errore conversione da CSV a TABLE"
 
-# Inizializzazione
-# -----------------------------------------------------------------------------
-    def __init__(self, asFields, sFieldKey=""):
-        sProc="Table.Init"
-        self.asFields=asFields
-        self.avData=[]
-        self.sFieldKey=sFieldKey
+    # Uscita
+        sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        self.sResult=sResult
+        return sResult
+
+# Sort Table
+# Input: Mode(K=Key, F=Field, KR=KeyReverse, FR=FieldReverse), Optional sField Sort(se Mode="K")
+# DA COMPLETARE
+# ------------------------------------------------------------------------------
+    def Sort(self, sMode="K", sField=""):
+        sResult=""
+        avKeySort=[]
+
+# Verifiche
+        if (sMode=="K") or (sMode=="") or (sMode=="KR"):
+            avKeySort=self.Keys()
+        elif (sMode=="F") or (sMode=="FR"):
+            lResult=self.GetCol(sField)
+            sResult=lResult[0]
+            if sResult=="": avKeySort=lResult[1]
+        else:
+            sResult="Mode not valid " + str(sMode)
+
+# Check avKeySort
+        if sResult=="":
+            nLen=ntSys.NF_ArrayLen(avKeySort)
+            if nLen<1: sResult="Table Empty"
+
+# Dictionary Keys->Index
+        if sResult == "":
+            dictKeys=ntSys.NF_DictFromArray(avKeySort,avKeySort)
+            for nF1 in range(0,nLen-1):
+                dictKeys[nF1]=nF1
+# Sort Dictionary
+#     dictParams (Input), sMode (K o "": Keys, "V"=Values), "KR"=Key/Reverse, "VA"=Value/Reverse
+# Result: lResult (0=Status, 1=NewDictionaryResultSorted)
+# -------------------------------------------------------------------------------------
+            lResult=ntSys.NF_DictSort(dictKeys,sMode)
+
+# Uscita
+        return sResult
+
+# Keys
+# ID campo Keys da avData
+# DA VERIFICARE
+# ------------------------------------------------------------------------------
+    def Keys():
+        sProc="Table Keys"
+        sResult=""
+
+    # Prende colonna campo chiave
+        nIndexKey=self.IndexKey
+        lResult=self.GetCol(nIndexKey)
+
+    # uscita
+        return ntSys.NF_Result(lResult[0],sProc,lResult[1])
+
