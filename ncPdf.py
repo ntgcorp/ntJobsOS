@@ -4,22 +4,27 @@
 #
 import nlSys
 from PyPDF2 import PdfReader, PdfWriter
+from fillpdf import fillpdfs
+
+# Test Mode
+NT_ENV_TEST_PDF=True
 
 class NC_Pdf:
 
 # Può essere sia letto che scritto
 # Members
+    PDF_Filler1=""
+    PDF_sModel=""
     PDF_sFilename=""
     PDF_objReader = None
     PDF_objFields=""
     PDF_objWriter=None
-    PDF_objWriterFile=None
     PDF_nPagesRead=0
     PDF_nPagesWrite=0
     PDF_bCompress=False
 
 # Metodi
-    def __init__(self, sFilename=""):
+    def __init__(self):
         pass
 
 # Read PDF File.
@@ -29,82 +34,62 @@ class NC_Pdf:
         sProc="PDF.FileRead"
         sResult=""
 
-        if ntSys.ntFileExists(sFilename)==False:
+        if nlSys.NF_FileExist(sFilename)==False:
             sResult="Non esistente " + sFilename
         else:
             self.PDF_sFilename=sFilename
+            self.PDF_sModel=sFilename
             try:
+                nStep=1
                 self.PDF_objReader = PdfReader(self.PDF_sFilename)
-                self.PDF_nPagesRead = len(PDF_obj.pages)
-                self.PDF_objFields=PdfReader.get_fields()
+                nStep=2
+                self.PDF_nPagesRead = len(self.PDF_objReader.pages)
+                nStep=3
+                self.PDF_objFields=self.PDF_objReader.get_fields()
             except:
-                sResult="Apertura PDF " + sFilename
+                sResult="Apertura PDF. Step " + str(nStep) + ": " + self.PDF_sFilename
 # Ritorno
-        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        sResult=nlSys.NF_ErrorProc(sResult, sProc)
         return sResult
 
-# Scrive Singola Pagina
+# Fill tutte le Pagine di un record dei campi
 # ----------------------------------------------------------------------
-    def PageWrite(self, objPage):
-        sProc="PDF.Page.Write"
-        sResult=""
-# Scrive con inizializzazione oggetto
-        if self.PDF_objWriter==None: self.PDF_objWriter=PdfWriter
-        if self.PDF_bCompress: page.compress_content_streams()  # This is CPU intensive!
-        self.PDF_objWriter.add_page(objPage)
-        # Incrementa contatore
-        self.PDF_nPagesWrite=self.PDF_nPagesWrite+1
-# Ritorno
-        sResult=ntSys.NF_ErrorProc(sResult, sProc)
-        return sResult
-
-# Fill Singola Pagina con Variabili
-# ----------------------------------------------------------------------
-    def PageFill(self, objPage, nPage, dictRecord):
-        sProc="PDF.Page.Fill"
-        sResult=""
-
-    # Merge Page + Fields
-        try:
-            self.PDF_ObjWriter.update_page_form_field_values(objPage, dictRecord)
-        except:
-            sResult="PDF errore pagina " + str(nPage)
-
-    # Ritorno
-        sResult=ntSys.NF_ErrorProc(sResult, sProc)
-        return sResult
-
-# Fill tutte le Pagine
-# ----------------------------------------------------------------------
-    def FileFill(self, dictParams):
+    def FileFill(self, dictRecord):
         sProc="PDF.File.Fill"
         sResult=""
 
-    # Parametri
-        sFileIn=ntSys.NF_DictGet(dictParams,"FILE.IN")
-        sFileOut=ntSys.NF_DictGet(dictParams,"FILE.OUT")
-        dictCSV=ntSys.NF_DictGet(dictParams,"CSV.RECORD")
-
     # Verifica
-        if self.PDF_sFileIn=="" or self.PDF_sFile_Out=="": sResult="FileIn o FileOut non specificati"
-        if ntSys.NF_DictLen(dictCSV)<=0: sResult="Tabella csv merge non inviata"
-        if self.PDF_nPagesRead==0: sResult="PDF Template non letto"
+        print ("PDF.OBJ. Template: " + self.PDF_sModel + ", Filename " + self.PDF_sFilename)
+        sResult=nlSys.NF_StrTests([
+            [(self.PDF_sModel==""), "FileTemplate non specificato","V1"],
+            [(self.PDF_sFilename==""), "Filename PDF out non specificato","V2"],
+            [nlSys.NF_DictLen(dictRecord)<=0, "Record csv per merge non inviato", "V3"],
+            [self.PDF_nPagesRead==0,"PDF Template non letto", "V4"]])
 
-    # Fill PDF Template
-        for nPage in range(0, self.PDF_nPagesRead-1):
-        # Record
+    # Get Fields
+        if sResult=="":
             try:
-                objPage=self.PDF_objReader.page[nPage]
+                fillpdfs.get_form_fields(self.PDF_sModel)
             except:
-                sResult="Recupero in fill pagina " + str(nPage)
-                break
-            if sResult=="": sResult=self.PageFill(objPage,nPage,dictRecord)
+                sResult="Recupero campi da template"
 
-    # Salvataggio File
-        if sResult: sResult=self.FileSave(sFileOut)
+# returns a dictionary of fields
+# Set the returned dictionary values a save to a variable
+# For radio boxes ('Off' = not filled, 'Yes' = filled)
+#data_dict = {
+#'Text2': 'Name',
+#'Text4': 'LastName',
+#'box': 'Yes',
+#}
+    # Fill PDF
+        if sResult=="":
+            try:
+                fillpdfs.write_fillable_pdf(self.PDF_sModel, self.PDF_sFilename, dictRecord)
+            except:
+                sResult="Riempimento campi in template"
 
-    # Ritorno
-        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+   # Ritorno
+        sResult=nlSys.NF_ErrorProc(sResult, sProc)
         return sResult
 
 # Salva PDF
@@ -121,7 +106,7 @@ class NC_Pdf:
         self.sPDF_Filename=sFileOut
 
     # Scrive File
-        lResult=ntSys.NF_FileOpen(sFileOut,"wb")
+        lResult=nlSys.NF_FileOpen(sFileOut,"wb")
         sResult=lResult[0]
         if sResult=="":
             self.PDF_ObjWriterFile=lResult[1]
@@ -133,5 +118,5 @@ class NC_Pdf:
         if sResult=="": self.PDF_objWriterFile.close
 
     # Ritorno
-        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        sResult=nlSys.NF_ErrorProc(sResult, sProc)
         return sResult

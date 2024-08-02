@@ -1,5 +1,5 @@
 
-# ntData - Azioni su File di . Parametro: jobs.ini 
+# ntData - Azioni su File di . Parametro: jobs.ini
 # -----------------------------------------------------------
 # Elaborazioni su file di dati, conversioni ed altro
 # Sintax: ntData inputFileINI.ini
@@ -12,7 +12,7 @@
 # * AZIONI:
 # * PDF.FILL (Compila PDF con CSV di parametri
 # [CONFIG]
-# ; AZIONE ESEGUITA DAL FRONTEND VIA JOB 
+# ; AZIONE ESEGUITA DAL FRONTEND VIA JOB
 # ACTION=PDF.FILL
 # ; Template
 # FILE.PDF=Test\Test_ntData_PDF_FILL.pdf
@@ -59,8 +59,8 @@ def NTD_Start():
 # -----------------------------------------------------------------------------
     jData=NC_Sys("NTDATA")                          # Application Object
     jData.sIniTest="Test\Test_ntData_PDF_FILL.ini"  # Test file
-    jData.asActions=["PDF.FILL"]                    # Azioni supportate
-    jData.cbActions=NTD_cbActions                   # CallBack Azioni
+    jData.asActions=["PDF.FILL", "CSV2XLS", "XLS2CSV"]                    # Azioni supportate
+    jData.cbActions=NTD_cbActions                                         # CallBack Azioni
 
 # Start (Args + Read INI/CSV)
 # ---------------------------------------------------------------------------
@@ -88,8 +88,14 @@ def NTD_cbActions(dictParams):
     if sAction=="PDF.FILL":
         lResult=NTD_PDF_Fill(dictParams)
         sResult=lResult[0]
+    elif sAction=="CSV2XLS":
+        lResult=NTD_CSV2XLS(dictParams)
+        sResult=lResult[0]
+    elif sAction=="XLS2CSV":
+        lResult=NTD_XLS2CSV(dictParams)
+        sResult=lResult[0]
     else:
-        sResult="Azione Non trovata"
+        sResult="Azione Non trovata " + sAction
 
 # Ritorno a chiamante
     nlSys.NF_DebugFase(NT_ENV_TEST_NTD, "End Azione: " + sAction + ": " + sResult, sProc)
@@ -121,9 +127,7 @@ def NTD_PDF_Fill(dictParams):
     # Lettura File PDF Template con Normalizzazione
         lResult=nlSys.NF_PathNormal(sPDF_Template)
         sPDF_Template=lResult[5]
-        sResult=objPdf.FileRead(sPDF_Template)
-
-# Verifica Tabella CSV che ci siano record
+        sResult=objPdf.FileRead(sPDF_Template)# Verifica Tabella CSV che ci siano record
     if sResult=="":
         nlSys.NF_DebugFase(NT_ENV_TEST_NTD, "Read PDF Template: " + sPDF_Template, sProc)
         asKeys=jData.objCSV.Keys()
@@ -150,6 +154,96 @@ def NTD_PDF_Fill(dictParams):
     sResult=nlSys.NF_ErrorProc(sResult,sProc)
     lResult=[sResult, dictReturnFiles]
     return lResult
+
+# Remapping sFileIn, sFileOut
+# Return 3 parameters. sResult, New FileIn, New FileOut
+def NF_PathRemapInOut(sFileIn,sFileOut,sExtOut):
+    sResult=""
+    sProc="PathRemapInOut"
+
+# Check FileIn Exist
+    sResult,sFileIn=nlSys.NF_FileExistMap(sFileIn)
+
+# FileOut create
+    if sResult=="":
+        if sFileOut=="" or sFileOut=="#":
+            sPath,sFile,sExt=nlSys.NF_PathScompose(sFileIn)
+            nlSys.NF_DebugFase(True, "FileIn. Path: " + sPath + ", File: " + sFile + ", Ext: " + sExt, sProc)
+            sFileOut=sPath + sFile + "." + sExtOut
+            nlSys.NF_DebugFase(True, "FileOut " + sFileOut, sProc)
+
+# Fine
+    sResult=nlSys.NF_ErrorProc(sResult, sProc)
+    return sResult,sFileIn,sFileOut
+
+# Command CSV2XLS
+def NTD_CSV2XLS(*args):
+    sProc="CMD_CSV2XLS"
+    sResult=""
+    sFileIn=""
+    sFileOut=""
+    sSheetName=""
+    nArgs=len(args)
+
+# Parameters
+    sFileIn=jData.GetParam("FILE.IN", "File in non dichiarato")
+    sFileOut=jData.GetParam("FILE.OUT", "File out non dichiarato")
+    sSheetName=jData.GetParam("SHEET", "Sheet non dichiarato")
+    nlSys.NF_DebugFase(True, "Parameters. Arg0: " + sFileIn + ",  Arg1: " + sFileOut + ", Arg2: " + sSheetName, sProc)
+
+# Remapping in e out (da non specificare o "#" se da remapping
+    sResult,sFileIn,sFileOut=NF_PathRemapInOut(sFileIn,sFileOut,"xlsx")
+
+# Debug Message
+    if sResult=="":
+# Create Panda objct + Read CSV
+        import ncPanda
+        objPanda=ncPanda.NC_PANDA_XLS()
+        nlSys.NF_DebugFase(True, "Read & Write. IN " + sFileIn + ",  OUT " + sFileOut + ", Sheet: " + sSheetName, sProc)
+        sResult=objPanda.read_from_csv(sFileIn)
+# Save to XLS
+    if sResult=="":
+        nlSys.NF_DebugFase(True, "Write XLS", sProc)
+        sResult=objPanda.write_to_xls(sFileOut,sSheetName)
+
+# Fine
+    sResult=nlSys.NF_ErrorProc(sResult, sProc)
+    return sResult
+
+# Comando XLS2CSV
+def NTD_XLS2CSV(dictParams):
+    sProc="CMD_XLS2SCSV"
+    sResult=""
+    sFileIn=""
+    sFileOut=""
+    sSheetName=""
+    nArgs=len(args)
+
+# Parameters
+    sFileIn=jData.GetParam("FILE.IN", "File in non dichiarato")
+    sFileOut=jData.GetParam("FILE.OUT", "File out non dichiarato")
+    sSheetName=jData.GetParam("SHEET", "Sheet non dichiarato")
+    nlSys.NF_DebugFase(True, "Parameters. Arg0: " + sFileIn + ",  Arg1: " + sFileOut + ", Arg2: " + sSheetName, sProc)
+
+# Remapping in e out (da non specificare o "#" se da remapping
+    sResult,sFileIn,sFileOut=NF_PathRemapInOut(sFileIn,sFileOut,"csv")
+
+    if sResult=="":
+# Create Panda objct + Read CSV
+        import ncPanda
+        objPanda=ncPanda.NC_PANDA_XLS()
+        nlSys.NF_DebugFase(True, "Read & Write. IN " + sFileIn + ",  OUT " + sFileOut + ", Sheet: " + sSheetName, sProc)
+        sResult=objPanda.read_from_xls(sFileIn, sSheetName)
+    if sResult=="":
+        sResult,nRows,nCols=objPanda.df_size()
+        nlSys.NF_DebugFase(True, "Size DF " + str(nRows) + ", Cols: " + str(nCols),sProc)
+# Save to XLS
+    if sResult=="":
+        nlSys.NF_DebugFase(True, "Write CSV", sProc)
+        sResult=objPanda.write_to_csv(sFileOut)
+# Fine
+    sResult=nlSys.NF_ErrorProc(sResult, sProc)
+    return sResult
 
 # --------------------------------- MAIN -------------------------------------
 def main():

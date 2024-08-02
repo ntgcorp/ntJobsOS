@@ -4,6 +4,8 @@
 import nlSys
 import os
 
+DA ELIMINARE
+
 # -------------------------------- COMMANDS ----------------------------------
 
 # Command CSV2XLS

@@ -87,16 +87,15 @@ def NF_Exec(**kwargs):
     sProc="NF_Exec"
     sResult=""
 
-    # Iterating over the Python kwargs dictionary
+# Iterating over the Python kwargs dictionary
     for key, value in kwargs.items():
         if key=="cmd": sExec_cmd=value
         if key=="args": sExec_args=value
 
-    # Test CMD
-        if sExec_cmd=="":
-            sResult="command line empty"
+# Test CMD
+    if sExec_cmd=="": sResult="command line empty"
 
-    # Esecuzione
+# Esecuzione
     if sResult=="":
         try:
             retcode=subprocess.call(sExec_cmd,sExec_args,capture_output=True)
@@ -104,7 +103,7 @@ def NF_Exec(**kwargs):
         except OSError as e:
             sResult="Errore Esecuzione " + str(e)
 
-    # Ritorno
+# Ritorno
     return NF_ErrorProc(sResult, sProc)
 
 # Return String on Condition
@@ -126,6 +125,53 @@ def NF_Wait(nSecondi):
     time.sleep(nSecondi)
 
 # ---------------------- FILES & PATH  -----------------------
+
+# Copia File con vari attributi
+# Source=File, Dest=FileDest/PathDest
+# Opzionali: 
+# - replace: No Errore se esiste e sovrascrive
+# - pathdest: Dest è un path non un file
+# - spath=Source è un wildargs - NON IMPLEMENTATO
+def NF_FileCopy(sSource, sDest, **kwargs):
+    sProc="File.Copy"
+    sResult=""
+    bReplace=False
+    bPathDest=False
+    
+# Parametri e Verifica
+    dictVerify={"bool": ("replace","pathdest")}
+    sResult=NF_ParamVerify(kwargs, dictVerify)
+    if sResult=="":
+        bReplace=NF_DictGet(kwargs, "replace",False)
+        bPathDest=NF_DictGet(kwargs,"pathdest",False)
+        bSpath=NF_DictGet(kwargs,"spath",False)
+      
+# Sistemazioni  
+    if bPathDest:
+        sPath,sFile,sExt=NF_FileScompose(sSource)
+        sFileDest=NF_PathMake(sDest,sFile,sExt)
+    else:
+        sFileDest=sDest
+        
+# Copia
+        try:       
+            shuil.copy(sSource, sDest*, follow_symlinks = True)
+# If source and destination are same
+except shutil.SameFileError:
+    print("Source and destination represents the same file.")
+ 
+# If there is any permission issue
+except PermissionError:
+    print("Permission denied.")
+ 
+# For other errors
+except:
+    print("Error occurred while copying file.")            
+        except Exception as e:
+            sResult=getattr(e, 'message', repr(e)) + "fle copy " + sSource ", in " + sDest                
+
+# Uscita
+    return NF_ErrorProc(sResult,sProc)   
 
 # Ritorna Errore Standard NF_FileExist o "" come stringa.
 def NF_FileExistErr(sFilename):
@@ -216,8 +262,8 @@ def NF_FileRead(sText, sFilename, sAttr):
     return lResult
 
 # Path.Rename
-# F=File, D=Directory, T=Directory e Contenuto
-def	NF_FileDelete(sFile,sType="FN"):
+# F=File(Default), D=Directory, T=Directory e Contenuto
+def	NF_FileDelete(sFile,sType="F"):
     sProc="NF_FileDelete"
     sResult=""
 
@@ -232,7 +278,7 @@ def	NF_FileDelete(sFile,sType="FN"):
         else:
             sResult="Tipo non supportato in FileDelete " + sType
     except Exception as e:
-        sResult=getattr(e, 'message', repr(e)) + "cancellazione file " + sFilename
+        sResult=getattr(e, 'message', repr(e)) + "cancellazione file " + sFile
 
 # Uscita
     return NF_ErrorProc(sResult,sProc)
@@ -321,6 +367,11 @@ def NF_PathCopy(sPathIn, sPathOut, sType="F"):
 # Uscita
     return NF_ErrorProc(sResult,sProc)
 
+# Verifica esiste una caartella
+# Ritorno: True=Ok
+def NF_PathDirExists(sPath):
+    return Path(sPath).is_dir()
+
 # Cerca un Path, anche ricorsivo con jolly e crea un array
 # R=Recursivo
 # Ritorna lResult, 0=Risultato, 1=Lista
@@ -339,6 +390,8 @@ def NF_PathFind(sPath, sType=""):
     lResult=[NF_ErrorProc(sResult,sProc), asPath]
     return lResult
 
+# Path dello script corrente
+# Type SCRIPT, ID.NE, PATH, NO.TYPE
 def NF_PathScript(sType):
     sResult=""
 
@@ -349,11 +402,12 @@ def NF_PathScript(sType):
     elif sType=="PATH":
         sResult=NF_PathAddSlash(os.path.dirname(os.path.abspath(__file__)))
     else:
-        sResult="NO TYPE"
+        sResult="NO.TYPE"
 # Ritorno
     return sResult
 
 # Path Rimappato con Dir Corrente
+# Argomenti per ora non usato
 def NF_PathCurDir(*args):
     sResult=""
     sCurDir=os.getcwd()
@@ -366,7 +420,7 @@ def NF_PathCurDir(*args):
     sResult=NF_PathAddSlash(sCurDir) + sPath
     return sResult
 
-# Add Slash
+# Add Slash a Path.
 def NF_PathAddSlash(sPath):
 
 # Slash per OS
@@ -378,6 +432,7 @@ def NF_PathAddSlash(sPath):
     return sResult
 
 # PathMake File e Cartella. Non aggiunge "\" alla fine
+# Parametri: Path, File, Ext
 def NF_PathMake(sPath, sFile, sExt):
     sResult=""
 # Setup
@@ -390,6 +445,7 @@ def NF_PathMake(sPath, sFile, sExt):
     return sResult
 
 # Split Path in Path,File,Ext
+# Ritorna tre parametri path,name,ext
 def NF_PathScompose(sFilePath):
     sPath = NF_PathAddSlash(os.path.dirname(sFilePath))
     sExt = os.path.splitext(sFilePath)[1][1:]
@@ -460,6 +516,60 @@ def NF_PathType(sFile):
 
 # Ritorno
     return sResult
+
+# ----------------------------- PARAMETRI ------------------------------
+
+
+# Parametri:
+# dictParams=dictionary parametri
+# exist(array): Quali devono esistere obbligatoriamente
+# num(arrray): Quali devono essere nuemerico
+# fexist(array): File che devono esistere
+# dexist(array): Path che devono esistere (vuoti o no)
+# alnum(array): alphanumeric
+# dict(dictionary): deve essere un dizionario
+# list(array): deve essere una lista
+def NF_ParamVerify(dictParams, **kwargs):
+    sProc="PARAN.VERIFY"
+    sResult=""
+
+# dictionary parametri
+    if NF_DictLen(dictParams)<1:
+        sResult="No params"
+        return sResult
+
+# Parametri check, Crea sResult aggiungendo sTemp ad ogni verifica
+    for key,value in kwargs.items():
+        sTemp=""
+        if key=="exist":
+            for vItem in value:
+                vValue=NF_DictGet(dictParams,vItem)
+                if len(str(vValue))==0: sResult=sResult + "not exist" + vItem
+        elif key=="num":
+            for vItem in value:
+                vValue=str(NF_DictGet(dictParams,vItem))
+                if (vValue.isnumeric()) == False: sTemp="not numeric" + vItem
+        elif key=="fexist":
+            for vItem in value:
+                sFilename=str(NF_DictGet(dictParams,vItem))
+                if (NF_FileExist(sFilename)==False): sTemp="file not exist " + vItem
+        elif key=="dexist":
+            for vItem in value:
+                vValue=str(NF_DictGet(dictParams,vItem))
+                if NF_PathDirExists(vValue)==False: sTemp="dir not exist " + vItem
+        elif key=="alnum":
+            for vItem in value:
+                vValue=str(NF_DictGet(dictParams,vItem))
+                if vValue.isalnum==False: sTemp="not alphanum " + vItem
+        elif key=="dict":
+                if NF_IsDict(value)==False: sTemp="not dict" + vItem
+        elif key=="list":
+                if NF_IsArray(value)==False: sTemp="not dict" + vItem
+        else:
+            sResult="check type errato: " + str(key)
+        if len(sTemp)>0: sResult = sResult + ": " + sTemp
+# Ritorno
+    return NF_ErrorProc(sResult, sProc)
 
 # ------------------------------- TEMPO E DATE -------------------------
 
@@ -1192,10 +1302,11 @@ def NF_DictExistKeys(dictData, avKeys):
         sResult="Array Keys to find empty"
 # Verifica Keys
     if (sResult==""):
+        
         lResult=NF_DictKeys(dictData)
-        avKeys
         sResult=lResult[0]
         if sResult=="":
+            avDataKeys=lResult[1]
             for vKey in avKeys:
                 if NF_ArrayFind(avDataKeys, vKey) < 0:
                     sResult=NF_StrAppendExt(sResult, str(vKey))

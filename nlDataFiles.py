@@ -512,7 +512,7 @@ class NC_DB:
             sResult="Close DB"
 
     # Uscita
-        return ntSys.NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 # ExecuteSQL
 # DA VERIFICARE

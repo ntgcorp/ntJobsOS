@@ -2,7 +2,7 @@
 # -----------------------------------------------------------
 # Supporto multicanale (SMTP e WS=WebService da implementare, GMAIL da implementare),
 # formato TXT/HTML, multiattach
-# Reference: ntSys
+# Reference: nlSys
 
 # Core ntJobs
 import nlSys
@@ -66,8 +66,8 @@ class NC_Mail:
         self.sResult=""
 
     # Verifica dictMail
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Recupero Params da dictMail. Chiavi: Dict:" + str(type(dictMail)) + ", " + str(ntSys.NF_DictLen(dictMail)) + "," + str(dictMail), sProc)
-        if ntSys.NF_DictLen(dictMail)<0: sResult=("Assente parametro dictMail o vuoto")
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Recupero Params da dictMail. Chiavi: Dict:" + str(type(dictMail)) + ", " + str(nlSys.NF_DictLen(dictMail)) + "," + str(dictMail), sProc)
+        if nlSys.NF_DictLen(dictMail)<0: sResult=("Assente parametro dictMail o vuoto")
 
     # Parametri - Assegnazione solo per quelli passati via dictMail, NON TUTTI (in caso di chiamata per cambiamento)
         if (sResult==""):
@@ -75,34 +75,34 @@ class NC_Mail:
                     "BODY.FILE", "SUBJECT", "CHANNEL",
                     "FROM","ATTACH","FORMAT")
             for sKey in asKeys:
-                if ntSys.NF_DictExistKey(dictMail, sKey):
-                    ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Recupero parametro da dictParams: " + sKey,sProc)
+                if nlSys.NF_DictExistKey(dictMail, sKey):
+                    nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Recupero parametro da dictParams: " + sKey,sProc)
                     # Per CC, TO, BCC
                     for sKey2 in ("CC","TO","BCC"):
-                        if (sKey==sKey2): self.dictREC[sKey]=ntSys.NF_DictGet(dictMail,sKey,"")
+                        if (sKey==sKey2): self.dictREC[sKey]=nlSys.NF_DictGet(dictMail,sKey,"")
                     # Per gli altri campi
-                    if sKey=="BODY": self.sBody=ntSys.NF_DictGet(dictMail,sKey,"")
-                    if sKey=="BODY.FILE": self.sBodyFile=ntSys.NF_DictGet(dictMail,sKey,"")
-                    if sKey=="FROM": self.sFrom=ntSys.NF_DictGet(dictMail,sKey,"")
-                    if sKey=="SUBJECT": self.sSubject=ntSys.NF_DictGet(dictMail,sKey,"")
-                    if sKey=="FORMAT": self.sFormat=ntSys.NF_DictGet(dictMail,sKey,"TXT")
-                    if sKey=="WAIT": self.nWait=ntSys.NF_DictGet(dictMail,sKey,1)
-                    if sKey=="ATTACH": self.sAttach=ntSys.NF_DictGet(dictMail,sKey,"")
-                    if sKey=="ID": self.sID=ntSys.NF_DictGet(dictMail,sKey,"")
-                    if sKey=="CHANNEL": self.sChannel=ntSys.NF_DictGet(dictMail,sKey,"SMTP")
+                    if sKey=="BODY": self.sBody=nlSys.NF_DictGet(dictMail,sKey,"")
+                    if sKey=="BODY.FILE": self.sBodyFile=nlSys.NF_DictGet(dictMail,sKey,"")
+                    if sKey=="FROM": self.sFrom=nlSys.NF_DictGet(dictMail,sKey,"")
+                    if sKey=="SUBJECT": self.sSubject=nlSys.NF_DictGet(dictMail,sKey,"")
+                    if sKey=="FORMAT": self.sFormat=nlSys.NF_DictGet(dictMail,sKey,"TXT")
+                    if sKey=="WAIT": self.nWait=nlSys.NF_DictGet(dictMail,sKey,1)
+                    if sKey=="ATTACH": self.sAttach=nlSys.NF_DictGet(dictMail,sKey,"")
+                    if sKey=="ID": self.sID=nlSys.NF_DictGet(dictMail,sKey,"")
+                    if sKey=="CHANNEL": self.sChannel=nlSys.NF_DictGet(dictMail,sKey,"SMTP")
 
             # Output Estrazione
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "dictMail: " + str(dictMail), sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "dictMail: " + str(dictMail), sProc)
 
 # SPLIT TO,BCC,CC in array - TRIM+UCASE - very valid mail and
         if (sResult==""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Recupero Array TO, CC, BCC",sProc)
-            asKeys=ntSys.NF_DictKeys(self.dictREC)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Recupero Array TO, CC, BCC",sProc)
+            asKeys=nlSys.NF_DictKeys(self.dictREC)
             for sREC_key in asKeys:
                 sREC_value=self.dictREC[sREC_key]
-                if ntSys.NF_StrTest(sREC_value):
+                if sREC_value!="":
                     asTemp=sREC_value.split(",")
-                    #asTemp=ntSys.NF_ArrayStrNorm(asTemp,"LRUS")
+                    #asTemp=nlSys.NF_ArrayStrNorm(asTemp,"LRUS")
                     self.dictREC2[sREC_key]=asTemp
                     #print (sProc + " gruppo: " + sREC_key + " " + str(self.dictREC2[sREC_key]))
 
@@ -110,34 +110,34 @@ class NC_Mail:
 
 # CAMPI OBBLIGATORI
         if (sResult==""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Verifica esistenza, CHANNEL, FROM: " + self.sChannel + ", " + self.sFrom, sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Verifica esistenza, CHANNEL, FROM: " + self.sChannel + ", " + self.sFrom, sProc)
             if (self.sChannel == ""): sResult = "channel assente"
-            if (self.sFrom == ""): sResult = ntSys.NF_StrAppendExt(sResult, "from assente")
+            if (self.sFrom == ""): sResult = nlSys.NF_StrAppendExt(sResult, "from assente")
 
 # ATTACH
         if (sResult!="") and (self.MailAttachExists()):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Recupero File(s) Attach",sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Recupero File(s) Attach",sProc)
             asAttach=self.sAttach.split(",")
-            asAttach=ntSys.NF_ArrayStrNorm(asAttach,"LR")
+            asAttach=nlSys.NF_ArrayStrNorm(asAttach,"LR")
             for sFile in asAttach:
-                sResult=ntSys.NF_StrAppendExt(ntSys.NF_FileExistErr(sResult),sFile)
-            if ntSys.NF_StrTest(sResult): sResult="File Attachment: " + sResult
+                sResult=nlSys.NF_StrAppendExt(nlSys.NF_FileExistErr(sResult),sFile)
+            if (sResult!=""): sResult="File Attachment: " + sResult
 
 # TO, CC, BCC, FROM
         if (sResult==""): sResult=self.MailAddressVerify()
 
 # BODY, BODY.FILE(priority)
         if (sResult==""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Fase: Recupero BODY, BODY.FILE",sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Fase: Recupero BODY, BODY.FILE",sProc)
             if self.sBodyFile != "":
-                ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Fase: Recupero BODY.FILE",sProc)
+                nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Fase: Recupero BODY.FILE",sProc)
             # Normalize
-                lResult=ntSys.NF_PathNormal(self.sBodyFile)
+                lResult=nlSys.NF_PathNormal(self.sBodyFile)
                 sResult=lResult[0]
                 # Read Body File
                 if sResult=="":
                     self.sBodyFile=lResult[5]
-                    lResult=ntSys.NF_StrFileRead(self.sBodyFile)
+                    lResult=nlSys.NF_StrFileRead(self.sBodyFile)
                     sResult=lResult[0]
                     if (sResult==""): self.sBodyFile=lResult[1]
 
@@ -145,7 +145,7 @@ class NC_Mail:
         if (sResult=="") and (self.bLogin==False): sResult=self.MailParamsLogin(dictMail)
 
         # Fine
-        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        sResult=nlSys.NF_ErrorProc(sResult, sProc)
         self.sResult=sResult
         return sResult
 
@@ -171,7 +171,7 @@ class NC_Mail:
             else:
                 sResult="Canale non gestito: " + str(self.sChannel)
     # Fine
-        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        sResult=nlSys.NF_ErrorProc(sResult, sProc)
         self.sResult=sResult
         return self.sResult
 
@@ -180,7 +180,7 @@ class NC_Mail:
     # Start
         sProc="MAIL_SmtpLoginTTLS"
         sResult=""
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.TTLS Login, Server/Port" + str(self.dictSMTP["SMTP.SERVER"])+ "/" + str(self.dictSMTP["SMTP.PORT"]), sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.TTLS Login, Server/Port" + str(self.dictSMTP["SMTP.SERVER"])+ "/" + str(self.dictSMTP["SMTP.PORT"]), sProc)
 
     # Crezione Oggetto SMTP SERVER
         try:
@@ -189,21 +189,21 @@ class NC_Mail:
             sResult="Logim SMTP TTLS"
     # TTLS
         if (sResult==""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.TTLS Start TTLS", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.TTLS Start TTLS", sProc)
             try:
                 self.SMTP_Server.starttls()
             except:
                 sResult="Login SMTP Start TTLS"
     # LOGIN SMTP
         if (sResult==""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.TTLS Login", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.TTLS Login", sProc)
             try:
                 self.SMTP_Server.login(self.dictSMTP["SMTP.USER"],self.dictSMTP["SMTP.PASSWORD"])
             except:
                 sResult="Login SMTP TTLS Login"
     # Fine OK FLAG LOGIN
         if (sResult==""): self.bLogin=True
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.TTLS Login: " + ntSys.iif(sResult=="","Ok",sResult), sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.TTLS Login: " + nlSys.iif(sResult=="","Ok",sResult), sProc)
         return sResult
 
 # Login STMP: SSL
@@ -211,7 +211,7 @@ class NC_Mail:
     # Start
         sProc="MAIL_SmtpLoginSSL"
         sResult=""
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SSL Login: Start, Context", sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SSL Login: Start, Context", sProc)
     # Context
         try:
             self.context = ssl.create_default_context()
@@ -219,14 +219,14 @@ class NC_Mail:
             sResult="Creazione context"
     # Crea Oggetto
         if (sResult==""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SSL Login: Crea Oggetto", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SSL Login: Crea Oggetto", sProc)
             try:
                 self.SMTP_Server = smtplib.SMTP_SSL(self.dictSMTP["SMTP.SERVER"],self.dictSMTP["SMTP.PORT"], context=self.context)
             except:
-                sResult=ntSys.NF_ErrorProc("Creazione oggetto smtp ssl", sProc)
+                sResult=nlSys.NF_ErrorProc("Creazione oggetto smtp ssl", sProc)
     # Server Login
         if (sResult==""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SSL Server Login", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SSL Server Login", sProc)
             try:
                 self.SMTP_Server.login(self.dictSMTP["SMTP.USER"],self.dictSMTP["SMTP.PASSWORD"])
             except:
@@ -234,7 +234,7 @@ class NC_Mail:
     # Fine
         if (sResult==""):
             self.bLogin=True
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.SSL Login: Ok", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.SSL Login: Ok", sProc)
         return sResult
 
 # SMTP - QUIT
@@ -246,8 +246,8 @@ class NC_Mail:
             self.SMTP_Server.quit()
         except:
             sResult="SMTP Quit"
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.Quit: " + ntSys.iif(sResult=="","Ok",sResult), sProc)
-        return ntSys.NF_ErrorProc(sResult,sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "SMTP.Quit: " + nlSys.iif(sResult=="","Ok",sResult), sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 # Verifica di tutte le mail
 # Ritorno: sResult tutte le mail sbaglite
@@ -257,25 +257,23 @@ class NC_Mail:
         sResult=""
 
         # Verifica PROM
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Verifica indirizzi mail, FROM", sProc)
-        sTemp=ntSys.iif(NF_StrIsEmail(self.sFrom),"","FROM: " + self.sFrom)
-        sResult=ntSys.NF_StrAppendExt(sResult, sTemp)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Verifica indirizzi mail, FROM", sProc)
+        sTemp=nlSys.iif(NF_StrIsEmail(self.sFrom),"","FROM: " + self.sFrom)
+        sResult=nlSys.NF_StrAppendExt(sResult, sTemp)
 
         # Verifica TO, CC, BCC
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Verifica indirizzi mail, TO, CC, BCC", sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Verifica indirizzi mail, TO, CC, BCC", sProc)
         for sType in ("TO","CC","BCC"):
-            if ntSys.NF_DictExistKey(self.dictREC2, sType):
+            if nlSys.NF_DictExistKey(self.dictREC2, sType):
                 for sMail in self.dictREC2[sType]:
-                    if ntSys.NF_NullToStr(sMail) != "":
-                        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, ": Verifica " + sType + " " + sMail, sProc)
-                        sTemp=ntSys.iif(NF_StrIsEmail(sMail),"", sType + ": " + str(sMail) + ", " + str(len(sMail)))
-                        sResult=ntSys.NF_StrAppendExt(sResult, sTemp)
+                    if nlSys.NF_NullToStr(sMail) != "":
+                        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, ": Verifica " + sType + " " + sMail, sProc)
+                        sTemp=nlSys.iif(NF_StrIsEmail(sMail),"", sType + ": " + str(sMail) + ", " + str(len(sMail)))
+                        sResult=nlSys.NF_StrAppendExt(sResult, sTemp)
 
-        #  Completamento se sResult != ""
-        if ntSys.NF_StrTest(sResult): sResult = "Mail non valide: " + sResult
 
         # Fine
-        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        sResult=nlSys.NF_ErrorProc(sResult, sProc)
         return sResult
 
 # Parametri LOGIN
@@ -286,22 +284,22 @@ class NC_Mail:
         sResult=""
 
 # Verifica Canale
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Params Login", sProc)
-        if ntSys.NF_ArrayFind(("SMTP","GMAIL", "WS"), self.sChannel) < 0: sResult = self.sChannel + " channel non trovato"
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Params Login", sProc)
+        if nlSys.NF_ArrayFind(("SMTP","GMAIL", "WS"), self.sChannel) < 0: sResult = self.sChannel + " channel non trovato"
 
 # CHANNEL SMTP
         if (self.sChannel=="SMTP") and (self.sResult==""):
-            sResult=ntSys.NF_DictExistKeys(dictMail, asFMT_MAIL_SMTP)
+            sResult=nlSys.NF_DictExistKeys(dictMail, asFMT_MAIL_SMTP)
             # SMTP - GET in dictSMTP - Reset default to "", Port=465 default
             # Prende dati SMTP e Default
             if sResult=="":
-                ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Params Login SMTP channel", sProc)
+                nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Params Login SMTP channel", sProc)
                 # Prende Dati da dictMail
-                self.dictSMTP=ntSys.NF_DictFromKeys(dictMail, asFMT_MAIL_SMTP)
-                for sKey in ntSys.NF_DictKeys(self.dictSMTP):
+                self.dictSMTP=nlSys.NF_DictFromKeys(dictMail, asFMT_MAIL_SMTP)
+                for sKey in nlSys.NF_DictKeys(self.dictSMTP):
                     print ("SMTP.PARAM: " + sKey + ", " + str(self.dictSMTP[sKey]))
                     if (sKey=="SMTP.PORT"):
-                        self.dictSMTP[sKey]=ntSys.NF_NullTo0(self.dictSMTP[sKey])
+                        self.dictSMTP[sKey]=nlSys.NF_NullTo0(self.dictSMTP[sKey])
                     else:
                         if self.dictSMTP[sKey]==None: self.dictSMTP[sKey]=""
 
@@ -309,7 +307,7 @@ class NC_Mail:
                 vPort=self.dictSMTP["SMTP.PORT"]
                 print ("smtp porta str: " + str(vPort))
                 anPorts=(587,465,25)
-                if ntSys.NF_IsString(vPort):
+                if nlSys.NF_IsString(vPort):
                     if vPort.isnumeric():
                         vPort=int(vPort)
                         print ("smtp porta int: " + str(vPort))
@@ -317,10 +315,10 @@ class NC_Mail:
                         sResult="Errore porta non specificata come numero"
                 if (sResult == ""):
                     print ("smtp porta: " + str(vPort))
-                    if (ntSys.NF_ArrayFind(anPorts,vPort)<0):
+                    if (nlSys.NF_ArrayFind(anPorts,vPort)<0):
                         sResult="Porta smtp non supportata: " + str(vPort) + "(" + str(anPorts) + ")"
                 self.dictSMTP["SMTP.PORT"]=vPort
-                ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Params Login, porta SMTP" + str(self.dictSMTP["SMTP.PORT"]), sProc)
+                nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Params Login, porta SMTP" + str(self.dictSMTP["SMTP.PORT"]), sProc)
 
 # CHANNEL WS
         if (self.sChannel=="WS") and (sResult==""):
@@ -336,21 +334,21 @@ class NC_Mail:
         sProc="MAIL_MESSAGE"
         sResult=""
         NT_ENV_TEST_MAILC_MSG=True
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "creazione corpo mail", sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "creazione corpo mail", sProc)
 
         try:
     # Header
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC_MSG, "mime.multipart", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC_MSG, "mime.multipart", sProc)
             self.message = MIMEMultipart()
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC_MSG, "aggiunta Subject,From", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC_MSG, "aggiunta Subject,From", sProc)
             self.message["Subject"] = self.sSubject
             self.message["From"] = self.sFrom
             for sKey in ("To","Cc","Bcc"):
                 sKey2=sKey.upper()
-                ntSys.NF_DebugFase(NT_ENV_TEST_MAILC_MSG, "aggiunta " + sKey, sProc)
+                nlSys.NF_DebugFase(NT_ENV_TEST_MAILC_MSG, "aggiunta " + sKey, sProc)
                 self.message[sKey]=self.dictREC[sKey2]
     # Body HTML/TXT
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC_MSG, "mimetext body attach", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC_MSG, "mimetext body attach", sProc)
             if self.sFormat=="HTML":
                 objBody=MIMEText(self.sBody, "html")
             else:
@@ -358,14 +356,14 @@ class NC_Mail:
     # Attach Body
             self.message.attach(objBody)
         except:
-            sResult=ntSys.NF_ErrorProc("creazione corpo mail", sProc)
+            sResult=nlSys.NF_ErrorProc("creazione corpo mail", sProc)
 
     # Attach
         sAttach=""
         if (sResult != "") and self.MailAttachExists():
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "aggiunta attach a corpo mail", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "aggiunta attach a corpo mail", sProc)
             for sAttach in self.sAttach:
-                sResult=ntSys.NF_StrAppendExt(sResult, self.MailAttachRead(sAttach))
+                sResult=nlSys.NF_StrAppendExt(sResult, self.MailAttachRead(sAttach))
 
     # End
         return sResult
@@ -375,12 +373,12 @@ class NC_Mail:
     def MailAttachRead(self, filename):
         sProc="MAIL_ATTACH_READ:"
         sResult=""
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Aggiunta Attach singolo: " + str(filename), sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Aggiunta Attach singolo: " + str(filename), sProc)
 
     # Verifica esistenza
-        if ntSys.NF_FileExist(filename): return ntSys.NF_ErrorProc("Non Esistente: " + filename, sProc)
+        if nlSys.NF_FileExist(filename): return nlSys.NF_ErrorProc("Non Esistente: " + filename, sProc)
         sResult="apertura file attach: " + filename
-        with open(filename, "rb", encoding=ntSys.NT_ENV_ENCODING) as attachment:
+        with open(filename, "rb", encoding=nlSys.NT_ENV_ENCODING) as attachment:
         # Add file as application/octet-stream
         # Email client can usually download this automatically as attachment
             part = MIMEBase("application", "octet-stream")
@@ -398,7 +396,7 @@ class NC_Mail:
             except:
                 sResult="add header attach: " + filename
     # End
-        return ntSys.NF_ErrorProc(sResult, sProc)
+        return nlSys.NF_ErrorProc(sResult, sProc)
 
     def MailMessageCreateTxt(self):
         dictFields= {"FROM": self.sFrom,
@@ -408,11 +406,11 @@ class NC_Mail:
                      "SUBJECT": self.sSubject,
                      "BODY": self.sBody}
         self.sMessageTxt="From: <$FROM>\nTo: <$TO>\n"
-        #if ntSys.NF_DictExistKey(self.dictREC2,"CC"): self.sMessageTxt += "Cc: $CC\n"
-        #if ntSys.NF_DictExistKey(self.dictREC2,"BCC"): self.sMessageTxt += "Bcc: $BCC\n"
+        #if nlSys.NF_DictExistKey(self.dictREC2,"CC"): self.sMessageTxt += "Cc: $CC\n"
+        #if nlSys.NF_DictExistKey(self.dictREC2,"BCC"): self.sMessageTxt += "Bcc: $BCC\n"
         self.sMessageTxt += "Subject: $SUBJECT\n\n$BODY"
-        self.sMessageTxt = ntSys.NF_StrReplaceDict(self.sMessageTxt,dictFields)
-        #ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Messaggio creato: " + str(self.sMessageTxt), sProc)
+        self.sMessageTxt = nlSys.NF_StrReplaceDict(self.sMessageTxt,dictFields)
+        #nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Messaggio creato: " + str(self.sMessageTxt), sProc)
         return ""
 
 # Init
@@ -422,16 +420,16 @@ class NC_Mail:
         print(sProc + ": Start")
 
     # Parameter con default values
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Params Get & Check", sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Params Get & Check", sProc)
         sResult=self.MailParams(dictMail)
 
     # LOGIN
         if self.sChannel=="SMTP":
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Login", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Login", sProc)
             sResult=self.MailSmtpLogin()
 
     # Fine inizializzazione
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Fine inizializzazione: " + self.sResult, sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Fine inizializzazione: " + self.sResult, sProc)
         self.sResult=sResult
 
 # Invio Singola MAIL(dictMail) - con eventuale rinnovo di alcuni campi
@@ -446,11 +444,11 @@ class NC_Mail:
 
     # Rinnovo Parametri
         if (sResult == "") and (dictParams != None):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Aggiunta parametri extra", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Aggiunta parametri extra", sProc)
             sResult=self.MailParams(dictParams)
 
     # Invio MAIL per casistica
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Invio Mail tipologia: " + self.sChannel + ", " + self.sFormat + ", Attach: " + str(self.MailAttachExists()),sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Invio Mail tipologia: " + self.sChannel + ", " + self.sFormat + ", Attach: " + str(self.MailAttachExists()),sProc)
         # TXT, NO ATTACH, SMTP
         if sResult=="":
             if self.sChannel=="SMTP":
@@ -463,13 +461,13 @@ class NC_Mail:
                 if (self.sFormat=="HTML") and (self.MailAttachExists()):
                     sResult=self.MailSendSmtpHtmWithAttach()
     # Wait
-        if self.nWait>0: ntSys.NF_Wait(self.nWait)
+        if self.nWait>0: nlSys.NF_Wait(self.nWait)
 
     # Server Quit
         if (self.bMassive==False): sResult=self.MailSmtpQuit()
 
     # Ritorno
-        sResult=ntSys.NF_ErrorProc(sResult, sProc)
+        sResult=nlSys.NF_ErrorProc(sResult, sProc)
         self.sResult=sResult
         return sResult
 
@@ -478,7 +476,7 @@ class NC_Mail:
         sProc="MailSendSmtpTxtNoAttach"
 
     # Creazione Message
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Creazione oggetto messaggio", sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Creazione oggetto messaggio", sProc)
         sResult=self.MailMessageCreateTxt()
         #message="From: <stefano.petrone@falcricrv.org>\nTo: <ntgcorp@gmail.com>\nSubject: e-mail test\n\ncorpo test"
         #self.test1()
@@ -488,16 +486,16 @@ class NC_Mail:
         receiver_email=",".join(self.dictREC2["TO"])
 
     # Invio Mail
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "invio messaggio: " + str(self.sMessageTxt), sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "invio messaggio: " + str(self.sMessageTxt), sProc)
         if (sResult == ""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Invio mail", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Invio mail", sProc)
             try:
             #self.SMTP_Server.sendmail(self.sFrom,",".join(self.dictREC2["TO"]),message)
                 self.SMTP_Server.sendmail(sender_email,receiver_email,message)
             except:
                 sResult="Invio Email: From " + str(sender_email) + ", To: " + str(receiver_email)
     # Ritorno
-        sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        sResult=nlSys.NF_ErrorProc(sResult,sProc)
         return sResult
 
 # MailSend SmtpTxtWithAttach
@@ -506,19 +504,19 @@ class NC_Mail:
         sProc="MailSendSmtpTxtWithAttach"
 
     # Creazione Message
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Attach da spedire: " + self.sAttach, sProc)
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Creazione oggetto messaggio", sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Attach da spedire: " + self.sAttach, sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Creazione oggetto messaggio", sProc)
         sResult=self.MailMessageCreate()
 
     # Invio Mail
         if (sResult == ""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Invio mail", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Invio mail", sProc)
             try:
                 self.SMTP_Server.sendmail(self.sFrom,self.dictREC["TO"],self.sBody)
             except:
                 sResult="invio mail: " + self.sID + str(self.dictREC["TO"])
     # Ritorno
-        sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        sResult=nlSys.NF_ErrorProc(sResult,sProc)
         return sResult
 
 # MailSend SmtpHtmNoAttach
@@ -526,12 +524,12 @@ class NC_Mail:
         sProc="MailSendSmtpHtmNoAttach"
 
     # Creazione Message
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Creazione oggetto messaggio", sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Creazione oggetto messaggio", sProc)
         sResult=self.MailMessageCreate()
 
     # Invio Mail
         if (sResult == ""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Invio mail", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Invio mail", sProc)
             print("MSG: " + self.sMessageTxt)
             self.SMTP_Server.sendmail(self.sFrom, ",".join(self.dictREC2["TO"]), self.sMessageTxt)
             #try:
@@ -540,7 +538,7 @@ class NC_Mail:
                 #sResult="invio mail: " + self.sID + str(self.dictREC2["TO"])
 
     # Ritorno
-        sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        sResult=nlSys.NF_ErrorProc(sResult,sProc)
         return sResult
 
 # MailSend SmtpHtmWithAttach
@@ -548,19 +546,19 @@ class NC_Mail:
         sProc="MailSendSmtpHtmWithAttach"
 
     # Creazione Message
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Creazione oggetto messaggio", sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Creazione oggetto messaggio", sProc)
         sResult=self.MailMessageCreate()
 
     # Invio Mail
         if (sResult == ""):
-            ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Invio mail", sProc)
+            nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Invio mail", sProc)
             try:
                 self.SMTP_Server.sendmail(self.sFrom,self.dictREC["TO"],self.sBody)
             except:
                 sResult="invio mail: " + self.sID + str(self.dictREC["TO"])
 
     # Ritorno
-        sResult=ntSys.NF_ErrorProc(sResult,sProc)
+        sResult=nlSys.NF_ErrorProc(sResult,sProc)
         return sResult
 
 # MailSendCSV: Massivo
@@ -579,7 +577,7 @@ class NC_Mail:
         sResultTot=""
 
     # Test
-        if ntSys.NF_DictLen(self.dictCSV)<1:
+        if nlSys.NF_DictLen(self.dictCSV)<1:
             sResult="Non caricato dictCSV con file csv esterno prima di chiamare " + sProc
             return sResult
 
@@ -587,11 +585,11 @@ class NC_Mail:
         asHeader=self.dictCSV[0]
         self.bMassive=True
         self.nEmailSent=0
-        self.dtMailStart=ntSys.NF_TS_ToStr()
-        asID=ntSys.NF_DictKeys(self.dictCSV)
+        self.dtMailStart=nlSys.NF_TS_ToStr()
+        asID=nlSys.NF_DictKeys(self.dictCSV)
         self.nEmailToSend=len(self.dictCSV)-1
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Numero Mail da inviare: " + str(self.nEmailToSend), sProc)
-        ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Mail.Da.Spedire.dictCSV: " + str(type(self.dictCSV)) + ", " + str(self.dictCSV), sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Numero Mail da inviare: " + str(self.nEmailToSend), sProc)
+        nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Mail.Da.Spedire.dictCSV: " + str(type(self.dictCSV)) + ", " + str(self.dictCSV), sProc)
 
     # Invio Mail CSV
         for vID in asID:
@@ -600,20 +598,20 @@ class NC_Mail:
         # Skip Header
             if vID != 0:
             # Conversione da Array a dict
-                lResult=ntSys.NF_DictFromArr(asHeader, asMail)
+                lResult=nlSys.NF_DictFromArr(asHeader, asMail)
                 sResult=lResult[0]
             # Verifica Parametri
                 if sResult=="":
                     dictMail=lResult[1]
                     sResult=lResult[0]
                     sResult=self.MailParams(dictMail)
-                    ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Mail, Params. ID: " + str(vID) + ", Type: " + str(type(dictMail)) + ", R: " + sResult + ", Params: " + str(dictMail), sProc)
+                    nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Mail, Params. ID: " + str(vID) + ", Type: " + str(type(dictMail)) + ", R: " + sResult + ", Params: " + str(dictMail), sProc)
             # Singola Mail: Invio
                 if (sResult==""):
                     sResult=self.MailSend(dictMail)
-                    ntSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Mail, Send, ID: " + str(vID) + ", R: " + sResult, sProc)
+                    nlSys.NF_DebugFase(NT_ENV_TEST_MAILC, "Mail, Send, ID: " + str(vID) + ", R: " + sResult, sProc)
             # Aggiunge TimeStamp Elaborazione + Result anche se va male
-                dictMail["TS"]=ntSys.NF_TS_ToStr()
+                dictMail["TS"]=nlSys.NF_TS_ToStr()
                 dictMail["R"]=sResult
 
             # Update Record Mail
@@ -621,12 +619,12 @@ class NC_Mail:
 
             # Prossima Mail
                 if  sResult!="" :
-                    sResultTot = ntSys.NF_StrAppendExt(sResult, "MAIL: " + str(vID) + ": " + sResult + "\n")
+                    sResultTot = nlSys.NF_StrAppendExt(sResult, "MAIL: " + str(vID) + ": " + sResult + "\n")
                 else:
                     self.nEmailSent+=1
     # Ritorno
-        sResult=ntSys.NF_ErrorProc(sResultTot,sProc)
-        self.dtMailEnd=ntSys.NF_TS_ToStr()
+        sResult=nlSys.NF_ErrorProc(sResultTot,sProc)
+        self.dtMailEnd=nlSys.NF_TS_ToStr()
         self.sResult=sResult
         return sResult
 
@@ -685,4 +683,4 @@ def NF_StrIsEmail(email):
 # for validating an Email
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
 # pass the regular expression and the string into the fullmatch() method
-    return ntSys.iif(re.fullmatch(regex, email),True,False)
+    return nlSys.iif(re.fullmatch(regex, email),True,False)

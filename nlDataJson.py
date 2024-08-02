@@ -15,7 +15,7 @@ class NC_Json:
         sProc="JSON_Read"
         sResult=""
 # Open File
-        lResult=NF_FileOpen(sFile, "r")
+        lResult=nlSys.NF_FileOpen(sFile, "r")
         sResult=lResult[0]
 # Load JSON
         if (sResult==""):
@@ -32,7 +32,7 @@ class NC_Json:
         sResult=""
 
 # Open File
-        lResult=NF_FileOpen(sFile, sAttr)
+        lResult=nlSys.NF_FileOpen(sFile, sAttr)
         sResult=lResult[0]
 
 # Write JSON
@@ -52,5 +52,35 @@ class NC_Json:
 # Len  0=Clear, -1=NotSet >0=Valori
 # ----------------------------------------------------------------------------------------
     def Len():
-        nResult=ntSys.NF_DictLen(self.dictData)
+        nResult=nlSys.NF_DictLen(self.dictData)
+
+# -------------------------- DICTIONARY --------------------------------------------------
+
+# Estrae Dictonary da JSON
+    def DictTo():
+        return self.dictData.copy()
+
+# Aggiunge un altro dictionary a quello del JSON
+    def DictAppend(dictJson):
+        sResult=""
+        sProc="JSON.DictAppend"
+
+        if nlSys.NF_IsDict(dictJson) == False:
+            sResult="no dict"
+        else:
+            nlSys.NF_DictMerge(self.dictData,dictJson)
+# Ritorno
+        return nlSys.NF_ErrorProc(sResult, sProc)
+
+# Set da Altro dictionary
+    def DictFrom(dictJson):
+        sResult=""
+        sProc="JSON.DictFrom"
+
+        if nlSys.NF_IsDict(dictJson) == False:
+            sResult="no dict"
+        else:
+            self.dictData=dictJson
+# Ritorno
+        return nlSys.NF_ErrorProc(sResult, sProc)
 

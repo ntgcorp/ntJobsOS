@@ -1,6 +1,3 @@
-commerciale@autobase.it
-jenny
-
 #-------------------------------------------------------------------------------
 # Schedulazione Pool Azioni in ricezione ed esecuzione fino a ricezione jobs.end di Quit
 # Creazione istanza classe NC_Jobs, start per verifica caricamento dati e LOOP azioni di polling/esecuzione/ritorno

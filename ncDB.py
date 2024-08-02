@@ -51,6 +51,8 @@ class NC_DB(**kwargs):
 
 # Apertura DB
     def OpenDb(self, **kwargs):
+        sResult=""
+        sProc="DB.OPEN"
 
 # Parametri
 #   sType(type)=sqlite3, ....
@@ -110,9 +112,8 @@ class NC_DB(**kwargs):
                     sResult=getattr(e, 'message', repr(e)) + "Errore DB "
             else:
                 sResult="DB Type null"
-# Ritorno
-        nlSys.NF_DebugFase(bDebug,"End: " + sResult,sProc)
-        return sResult
+# Uscita
+       return nlSys.NF_ErrorProc(sResult,sProc)
 
 # Chiude Connessione
 # ------------------------------------------------------------------------------
@@ -129,7 +130,7 @@ class NC_DB(**kwargs):
             self.dictTable={}
 
 # Uscita
-        sResult=nlSys.NF_ErrorProc(sResult,sProc)
+       return nlSys.NF_ErrorProc(sResult,sProc)
 
 # Esegue Stringa SQL
 # ------------------------------------------------------------------------------
@@ -159,9 +160,8 @@ class NC_DB(**kwargs):
                 sResult=getattr(e, 'message', repr(e)) + "Errore DB "
         else:
             sResult="DB Type null"
-
 # Uscita
-        sResult=nlSys.NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 # Esegue Stringa SQL in modalità estesa
 # sqL=singolo
@@ -181,7 +181,7 @@ class NC_DB(**kwargs):
             if key=='sql':
                 sSQL=value
             elif key=='sql_list':
-                asSQL=
+                asSQL=value
             elif key=='vars':
                 dictData={}
             else:
@@ -189,20 +189,20 @@ class NC_DB(**kwargs):
 
 # Costruzione Lista degli SQL (1 o tanti)
         if sResult=="":
-            if (len(asSQL)=0) and (len()>0):
+            if (len(asSQL)==0) and (len()>0):
                 asSQL=[sSQL]
                 sSQL=""
                 nItems=len(asSQL)
 # Items Null
-            if nItems=0: sResult="List SQL to Exec empty"
+            if nItems==0: sResult="List SQL to Exec empty"
 
 # Parte 1: Change multiplo variabili (per diagnostica diviso in 2 parti)
-        for nIndex=0 in range(nItesm):
+        for nIndex in range(nItems):
             sSQL=nlSys.NF_StrReplaceDict(asSQL[nIndex],dictData)
             asSQL[nIndex]=sSQL
 # Parte 2: Exec multiplo - Con Log - Memorizza almeno uno degli errori per uscita ma tutto nei log con ID davanti da 0 a n
         if sResult=="":
-            for nIndex=0 in
+            for nIndex in range(nItems):
                 sResult2=self.SqlExec(sSQL)
                 sTemp=str(nIndex) & ": " & sResult2
                 if sResult2 != "": sResult=sTemp
@@ -265,9 +265,9 @@ class NC_DB(**kwargs):
 
 
 # Uscita
-        sResult=nlSys.NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
-# Carica Tabella da Query
+# Carica Tabella da Query in dictionary
 # DA FARE
 # ------------------------------------------------------------------------------
     def SqlTablLoad(self,**kwargs):
@@ -275,7 +275,7 @@ class NC_DB(**kwargs):
         sResult=""
 
 # Uscita
-        sResult=nlSys.NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 # Salva Tabella su Query
 # DA FARE
@@ -285,4 +285,4 @@ class NC_DB(**kwargs):
         sResult=""
 
 # Uscita
-        sResult=nlSys.NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
