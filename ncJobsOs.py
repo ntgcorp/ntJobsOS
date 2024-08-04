@@ -19,7 +19,7 @@
 # -----------------------------------------------------------------------------
 
 # Librerie
-import nlSys
+import nlSys, os
 import nlDataFiles
 from nlDataFiles import NC_CSV
 from ncTable import NC_Table
@@ -29,6 +29,7 @@ from ncLog import objLog
 
 # Test Mode
 NT_ENV_TEST_JOBS=True
+JOBS_WAIT_STD=5
 
 # ----------------------------- CLASSI ---------------------------
 class NC_Jobs:
@@ -71,7 +72,6 @@ class NC_Jobs:
 # User CURRENT Details
     User_ID=""
     User_asGroups=[]
-# Log
 
 # Init - Richiede presenza jData già inizializzata
 # ------------------------------------------------------------------------------------------------------------
@@ -118,7 +118,7 @@ class NC_Jobs:
         objCSV=NC_CSV()
         for nIndex in range(0,nlSys.NF_DictLen(self.asCSV)-1):
         # NomeFile e Normalizzazione
-            sFile="Data/ntjobs_" + asCSV[nIndex].lower() + iif(nIndex==JOB_DAT_CFG,"ini",".csv")
+            sFile="Data/ntjobs_" + self.asCSV[nIndex].lower() + nlSys.iif(nIndex==JOB_DAT_CFG,"ini",".csv")
             lResult=nlSys.NF_PathNormal(sFile)
             sResult=lResult[0]
             if sResult=="": sResult=nlSys.NF_FileExistErr(lResult[1])
@@ -135,7 +135,7 @@ class NC_Jobs:
                     if sResult=="":
                         self.dictConfig=lResult[1].copy()
                         dictAdd=self.ConfigPaths()
-                        self.TabData[nIndex]=NF_DictMerge(dictConfig,dictAdd)
+                        self.TabData[nIndex]=nlSys.NF_DictMerge(self.dictConfig,dictAdd)
                 else:
                     asFields=dictFMT_JOBS_FIELDS[nIndex]
                     dictParams={
@@ -196,7 +196,7 @@ class NC_Jobs:
         for sTemp in asPath:
         # Split+Norm
             asPaths=sTemp.split(",")
-            asPaths=NF_ArrayNorm(asPaths,"LR")
+            asPaths=nlSys.NF_ArrayNorm(asPaths,"LR")
         # Cerca Usser
             nIndex=TabData[self.JOB_DAT_USR].Index("USER_PATHS",sTemp)
             if nIndex > 0:
@@ -223,7 +223,7 @@ class NC_Jobs:
         # Per tutti i files JOBS*.INI del path trovato, salvo errore
             if sResult=="":
                 asFiles=lResult[1]
-                nFiles=NF_ArrayLen(asFiles)
+                nFiles=nlSys.NF_ArrayLen(asFiles)
             # Se Trovato almeno 1
                 if nFiles>0:
             # Legge INI e Sposta File o ritorno MAIL
@@ -261,7 +261,7 @@ class NC_Jobs:
             # Aggiunge File Jobs
             self.asFilesJob.Append(sFileJob)
     # Uscita
-        return NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 
 # Sposta i files di un job in cartella Inbox\JOB_ID
@@ -291,7 +291,7 @@ class NC_Jobs:
 
     # Verifica esisgtenza, se non esistono tutti NON PROSEGUE
             for sFile in asFiles:
-                if nlSys.NF_FileExist(sFile)==False: sResult=NF_StrAppendExt(sResult, "not.exist=" + sFile, ",")
+                if nlSys.NF_FileExist(sFile)==False: sResult=nlSys.NF_StrAppendExt(sResult, "not.exist=" + sFile, ",")
 
     # Creazione Folder + Spostamento files
             if sResult=="":
@@ -306,7 +306,7 @@ class NC_Jobs:
                         sFileOut=nlSys.NF_PathMake(self.sInbox, lResult[1], lResult[2])
                         sResult=os.move(sFile,sPathJob_Out)
     # Uscita
-        return NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 # Exec Action
 # 1: Cerca in Inbox se ci sono jobs da eseguire
@@ -341,7 +341,7 @@ class NC_Jobs:
                 if sResult=="": sResult=self.Exec_Run(self)
 
     # Uscita
-        return NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 # Verifica dictJobs (Login Utente)
 # -----------------------------------------------------------------------------
@@ -365,7 +365,7 @@ class NC_Jobs:
             self.User_asGroups=self.Jobs_TabData(self.JOB_DAT_CFG, "USER", sUser, "GROUPS")
 
         # Uscita
-        return NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 
 # Verifica dictJobs.Job (Singolo Command=CMD che sia nei gruppi dell'utente
@@ -397,7 +397,7 @@ class NC_Jobs:
 # DA COMPLETARE
 
     # Uscita
-        return NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 
 # Ritorno per Jobs.End (per non inizio)
@@ -476,7 +476,7 @@ class NC_Jobs:
         if nID_TAB==self.JOB_DAT_USG: avFields=self.asGroups
         if nID_TAB==self.JOB_DAT_CFG:
             avFields=self.asCFS
-        nIndexField=NF_ArrayFind(avFields, sKey)
+        nIndexField=nlSys.NF_ArrayFind(avFields, sKey)
         vDato=nlSys.NF_ArrayFind(self.avTable[nID_TAB][nIndexField])
 
 # Ritorno
@@ -562,7 +562,7 @@ class NC_Jobs:
 # AZIONE: Start NC_Jobs
 # Ritorna sResult e self.sResult
 # -----------------------------------------------------
-    def cmd_Start(dictParams):
+    def cmd_Start(self, dictParams):
         sProc="JOBS.START"
 
 # Lettura INI
@@ -577,7 +577,7 @@ class NC_Jobs:
 
 # AZIONE: Ciclo Get -> Exec -> Return -> Archive
 # -----------------------------------------------------
-    def cmd_Loop(dictParams):
+    def cmd_Loop(self, dictParams):
         sProc="JOBS.LOOP"
         sResult=""
 # Log
@@ -634,7 +634,7 @@ class NC_Jobs:
 
 # AZIONE: Quit
 # -----------------------------------------------------
-    def cmd_Quit():
+    def cmd_Quit(self):
         sProc="JOBS.QUIT"
         sResult=""
 # Log
@@ -652,7 +652,7 @@ class NC_Jobs:
 
 # AZIONE: Restart
 # -----------------------------------------------------
-    def cmd_Restart():
+    def cmd_Restart(self):
         sProc="JOBS.RESTART"
         sResult=""
 # Log
@@ -663,7 +663,7 @@ class NC_Jobs:
         sResult=nlSys.NF_FileWrite(sFileJobRestart,"Restart")
 
 # Scrive File Quit
-        if sResult=="": sResult=cmd_Quit()
+        if sResult=="": sResult=self.cmd_Quit()
 
 # Uscita
         sResult=nlSys.NF_ErrorProc(sResult, sProc)
@@ -678,7 +678,7 @@ class NC_Jobs:
 
     # Parametri
         sUser=dictReturn["USER"]
-        sType==dictReturn["TYPE"]
+        sType=dictReturn["TYPE"]
         sJobID=dictReturn["JOBID"]
         sPath=dictReturn["JOBFILE"]
         sReturn=dictReturn["RESULT"]
@@ -721,7 +721,7 @@ class NC_Jobs:
         if sResult=="":
             asPathInboxJ=lResult[1]
             for sPathInBoxJ in asPathInbox:
-                sResult=nlSys.NF_StrAppendExt(sResult,End_Archive(sPathInboxJ))
+                sResult=nlSys.NF_StrAppendExt(sResult,self.End_Archive(sPathInboxJ))
 # Uscita
         sResult=nlSys.NF_ErrorProc(sResult, sProc)
         return sResult

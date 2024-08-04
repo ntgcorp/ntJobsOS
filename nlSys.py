@@ -21,7 +21,7 @@ from datetime import datetime
 # Per File Temporanei
 import tempfile
 # Per Argomenti (NF_Args)
-import sys,argparse
+import sys, argparse
 
 # Setup: TEST o NO
 NT_ENV_TEST_SYS=True
@@ -126,50 +126,82 @@ def NF_Wait(nSecondi):
 
 # ---------------------- FILES & PATH  -----------------------
 
-# Copia File con vari attributi
+# Remapping sFileIn, sFileOut
+# Return 3 parameters. sResult, New FileIn, New FileOut
+def NF_FileChangeExt(sFileIn,sFileOut,sExtOut):
+    sResult=""
+    sProc="FileChangeExt"
+
+# Check FileIn Exist
+    sResult,sFileIn=NF_FileExistMap(sFileIn)
+
+# FileOut create
+    if sResult=="":
+        if sFileOut=="" or sFileOut=="#":
+            sPath,sFile,sExt=nlSys.NF_PathScompose(sFileIn)
+            nlSys.NF_DebugFase(True, "FileIn. Path: " + sPath + ", File: " + sFile + ", Ext: " + sExt, sProc)
+            sFileOut=sPath + sFile + "." + sExtOut
+            nlSys.NF_DebugFase(True, "FileOut " + sFileOut, sProc)
+
+# Fine
+    sResult=nlSys.NF_ErrorProc(sResult, sProc)
+    return sResult,sFileIn,sFileOut
+
+# Copia File con vari attributi di copia. Prima su file temporaneo poi su dest con eventuale tenuta old
 # Source=File, Dest=FileDest/PathDest
 # Opzionali: 
 # - replace: No Errore se esiste e sovrascrive
 # - pathdest: Dest è un path non un file
+# - oldtake: NotKill Old if Replace
 # - spath=Source è un wildargs - NON IMPLEMENTATO
+
+# DA VERIFICARE
 def NF_FileCopy(sSource, sDest, **kwargs):
     sProc="File.Copy"
     sResult=""
     bReplace=False
     bPathDest=False
+    sFileDest=""
     
 # Parametri e Verifica
-    dictVerify={"bool": ("replace","pathdest")}
+    dictVerify={"bool": ("replace","pathdest","oldtake")}
     sResult=NF_ParamVerify(kwargs, dictVerify)
     if sResult=="":
         bReplace=NF_DictGet(kwargs, "replace",False)
         bPathDest=NF_DictGet(kwargs,"pathdest",False)
         bSpath=NF_DictGet(kwargs,"spath",False)
+        bOld=NF_DictGet(kwargs,"oldtake",False)
       
 # Sistemazioni  
     if bPathDest:
-        sPath,sFile,sExt=NF_FileScompose(sSource)
+        sPath,sFile,sExt=NF_PathScompose(sSource)
         sFileDest=NF_PathMake(sDest,sFile,sExt)
     else:
-        sFileDest=sDest
-        
-# Copia
-        try:       
-            shuil.copy(sSource, sDest*, follow_symlinks = True)
-# If source and destination are same
-except shutil.SameFileError:
-    print("Source and destination represents the same file.")
- 
-# If there is any permission issue
-except PermissionError:
-    print("Permission denied.")
- 
-# For other errors
-except:
-    print("Error occurred while copying file.")            
-        except Exception as e:
-            sResult=getattr(e, 'message', repr(e)) + "fle copy " + sSource ", in " + sDest                
+        sFileDest=sDest        
 
+# File Temp - Prima copia su file temp poi rename in base a gestione duplicati
+    sFileTemp=NF_PathMake(sDest,sFile,"temp")
+    
+# Copia 
+    if sResult=="":
+        try:       
+            shutil.copy(sSource, sDest)
+        except Exception as e:
+            sResult=getattr(e, 'message', repr(e)) + "fle copy " + sSource + ", in " + sDest                    
+
+# Gestione in caso ci sia già. Se Tenere Old già rinomina
+    if sResult=="":
+        if NF_FileExist(sDest):
+            if bOld:
+                sFileOld=NF_PathMake(sDest,sFile,sExt)
+                sResult=NF_FileRename(sFileDest,sFileOld)
+            else:
+                sResult=NF_FileDelete(sFileDest)
+
+# Rinomina Temp in Dest
+    if sResult=="":
+         sResult=NF_FileRename(sFileTemp,sFileDest)
+ 
 # Uscita
     return NF_ErrorProc(sResult,sProc)   
 

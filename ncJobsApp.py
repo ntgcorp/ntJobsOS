@@ -34,6 +34,7 @@ class NC_Sys:
     sTS_End = ""          # TimeStart: End
 # INI Config + Actions in sequenza
     dictConfig = {}       # Config (Sezione Config)
+    dictArgs
     dictConfigFields = {} # Tipizzazione particolare (per tutte le sezioni).
     dictJobs = {}         # Jobs/Sections - Config + Parametri richiamo Actions in sequenza
     asJobs = []           # Jobs Names List (config....ecc)
