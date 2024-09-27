@@ -11,7 +11,7 @@ class NC_Json:
 # Load JSON file to Dict
 # Return lResult. 0=sResult, 1=dict
 # ----------------------------------------------------------------------------------------
-    def FileRead(sFile):
+    def FileRead(self, sFile):
         sProc="JSON_Read"
         sResult=""
 # Open File
@@ -27,7 +27,7 @@ class NC_Json:
                 sResult="lettura json"
 # Write JSON file From Dict
 # ----------------------------------------------------------------------------------------
-    def Write(sFile, sAttr):
+    def Write(self, sFile, sAttr):
         sProc="JSON_Write"
         sResult=""
 
@@ -46,22 +46,22 @@ class NC_Json:
 
 # Return Index to Key
 # ----------------------------------------------------------------------------------------
-    def Index(sKey):
-        nResult=dictData[sKey][0]
+    def Index(self, sKey):
+        nResult=self.dictData[sKey][0]
 
 # Len  0=Clear, -1=NotSet >0=Valori
 # ----------------------------------------------------------------------------------------
-    def Len():
+    def Len(self):
         nResult=nlSys.NF_DictLen(self.dictData)
 
 # -------------------------- DICTIONARY --------------------------------------------------
 
 # Estrae Dictonary da JSON
-    def DictTo():
+    def DictTo(self):
         return self.dictData.copy()
 
 # Aggiunge un altro dictionary a quello del JSON
-    def DictAppend(dictJson):
+    def DictAppend(self, dictJson):
         sResult=""
         sProc="JSON.DictAppend"
 
@@ -73,7 +73,7 @@ class NC_Json:
         return nlSys.NF_ErrorProc(sResult, sProc)
 
 # Set da Altro dictionary
-    def DictFrom(dictJson):
+    def DictFrom(self, dictJson):
         sResult=""
         sProc="JSON.DictFrom"
 

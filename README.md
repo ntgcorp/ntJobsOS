@@ -5,6 +5,8 @@ Python Framework but also Batch Launch Jobs Platform for batch working using clo
 
 Alpha Release - Not working - Under development
 
+See index.xlsx for files list
+
 http://www.ntgcorp.it/ntjobs
 
 ----------------- ntJobsPy Conventions --------------------------
@@ -13,7 +15,7 @@ http://www.ntgcorp.it/ntjobs
   lResult = Return list with multiple returns since it is not possible to modify global variables or byRef in Python. Where 0 = sResult
   NF_ErrorProc = Construction of the return error string with the name of the Proc where it occurs
   
-  na*     = ntJobs Applications (FrontEnd)
-  naJobs  = ntJobsOS Start Applications
+  na*     = ntJobs Applications (FrontEnd for special cases) 
+  ntJobs  = ntJobsOS Start Applications. Special naJobs Unique FrontEndApp
   nl*     = ntJobs Libraries
   nc*     = OS and FrontEnd Class (called from ntJobs Apps)

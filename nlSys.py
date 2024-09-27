@@ -1,5 +1,6 @@
 # ntJobsPy Framework
 # CORE LIBRARY - DataTypes - OS - Basic Files - Process - Date
+# Altre su nlExt dove vengono spostate le meno usate
 # --------------------------------------------------------------------
 # Lib per gestione path e files
 from pathlib import Path
@@ -9,8 +10,10 @@ import os
 import shutil
 # For NF_PathFind + NF_FileCopy
 import glob
-# For Exec
+# For Exec & Kill
 import subprocess
+import signal
+import platform
 # Per Ambiente
 from sys import platform
 # Lib per gestione Replace
@@ -64,12 +67,10 @@ def NF_Args(axArgs):
     else:
         #   lResult[0]: Diagnostica di ritorno. ""=NoError,
         #   lResult[1]: Dict,
-        #   Altri: 2=LenHdr, 3=LenData, 4=TypeHDR(se non Array), 5=TypeData(se non Array)
         lResult=NF_DictFromArr([],sys.argv[1:])
         sResult=lResult[0]
         if sResult=="":
             dictArgs=lResult[1]
-
 # Ritorno
 #    NF_DebugFase(True,"End",sProc)
     lResult=[sResult, dictArgs]
@@ -82,29 +83,74 @@ def iif (bExpr, trueResult, falseResult):
     if bExpr: return trueResult
     else: return falseResult
 
-# Execute External program
-def NF_Exec(**kwargs):
-    sProc="NF_Exec"
+def NF_Kill(**kwargs):
+    sProc="NF_Kill"
     sResult=""
+    PID=0
 
+# Parameters
 # Iterating over the Python kwargs dictionary
     for key, value in kwargs.items():
-        if key=="cmd": sExec_cmd=value
-        if key=="args": sExec_args=value
+        if key=="pid":
+            PID=value
+        else:
+            sResult="key invalid " + key
 
-# Test CMD
-    if sExec_cmd=="": sResult="command line empty"
-
-# Esecuzione
-    if sResult=="":
-        try:
-            retcode=subprocess.call(sExec_cmd,sExec_args,capture_output=True)
-            if retcode<0: sResult="Errore in esecuzione: " + str(retcode)
-        except OSError as e:
-            sResult="Errore Esecuzione " + str(e)
+# Try Kill
+    try:
+        if platform.system() != 'Windows':
+            os.killpg(PID, signal.SIGKILL)
+        else:
+            os.kill(PID, signal.SIGTERM)
+    except Exception as e:
+        sResult=getattr(e, 'message', repr(e)) + "kill process " + pid
 
 # Ritorno
     return NF_ErrorProc(sResult, sProc)
+
+# Execute External program
+# action: tipo di exec
+# cmd=Path da eseguire
+# args=argomenti
+# Ritorno: lResult
+# 0=sResult, 1=paction(="" no), 2=command esecuzione, 3=arg,
+def NF_Exec(**kwargs):
+    sProc="NF_Exec"
+    sResult=""
+    sExec_cmd=""
+    sExec_action=""
+    vExec_pid=None
+    sExec_Args=""
+
+# Iterating over the Python kwargs dictionary
+    for key, value in kwargs.items():
+        if key=="cmd":
+            sExec_cmd=value
+        elif key=="args":
+            sExec_args=value
+        elif key=="action":
+            sExec_action=value
+        else:
+            sResult="key invalid " + key
+
+# Test CMD
+    if sExec_cmd=="":
+        sResult="command line empty"
+
+# Esecuzione - Caso Base
+    if sResult=="":
+        if sExec_action=="":
+            try:
+                vExec_pid=subprocess.call(sExec_cmd,sExec_args,capture_output=True)
+                if retcode<0: sResult="Errore in esecuzione: " + str(retcode)
+            except OSError as e:
+                sResult="Errore Esecuzione " + str(e)
+    else:
+        sResult="Action not found " + sExec_action
+
+# Ritorno
+    sResult=NF_ErrorProc(sResult, sProc)
+    lResult=[sResult, vExec_pid, sExec_action, sExec_cmd, sExec_args]
 
 # Return String on Condition
 def NF_Assert(bCondition=False,sResultTrue="",sResultFalse="",sProc=""):
@@ -126,34 +172,14 @@ def NF_Wait(nSecondi):
 
 # ---------------------- FILES & PATH  -----------------------
 
-# Remapping sFileIn, sFileOut
-# Return 3 parameters. sResult, New FileIn, New FileOut
-def NF_FileChangeExt(sFileIn,sFileOut,sExtOut):
-    sResult=""
-    sProc="FileChangeExt"
-
-# Check FileIn Exist
-    sResult,sFileIn=NF_FileExistMap(sFileIn)
-
-# FileOut create
-    if sResult=="":
-        if sFileOut=="" or sFileOut=="#":
-            sPath,sFile,sExt=nlSys.NF_PathScompose(sFileIn)
-            nlSys.NF_DebugFase(True, "FileIn. Path: " + sPath + ", File: " + sFile + ", Ext: " + sExt, sProc)
-            sFileOut=sPath + sFile + "." + sExtOut
-            nlSys.NF_DebugFase(True, "FileOut " + sFileOut, sProc)
-
-# Fine
-    sResult=nlSys.NF_ErrorProc(sResult, sProc)
-    return sResult,sFileIn,sFileOut
-
 # Copia File con vari attributi di copia. Prima su file temporaneo poi su dest con eventuale tenuta old
 # Source=File, Dest=FileDest/PathDest
-# Opzionali: 
+# Opzionali:
 # - replace: No Errore se esiste e sovrascrive
 # - pathdest: Dest è un path non un file
 # - oldtake: NotKill Old if Replace
 # - spath=Source è un wildargs - NON IMPLEMENTATO
+# - bMove(move). Spostamento
 
 # DA VERIFICARE
 def NF_FileCopy(sSource, sDest, **kwargs):
@@ -161,39 +187,40 @@ def NF_FileCopy(sSource, sDest, **kwargs):
     sResult=""
     bReplace=False
     bPathDest=False
+    bMove=False
     sFileDest=""
-    
+
 # Parametri e Verifica
     dictVerify={"bool": ("replace","pathdest","oldtake")}
     sResult=NF_ParamVerify(kwargs, dictVerify)
     if sResult=="":
         bReplace=NF_DictGet(kwargs, "replace",False)
         bPathDest=NF_DictGet(kwargs,"pathdest",False)
+        bMove=NF_DictGet(kwargs,"move",False)
         bSpath=NF_DictGet(kwargs,"spath",False)
         bOld=NF_DictGet(kwargs,"oldtake",False)
-      
-# Sistemazioni  
+
+# Sistemazioni
     if bPathDest:
         sPath,sFile,sExt=NF_PathScompose(sSource)
         sFileDest=NF_PathMake(sDest,sFile,sExt)
+        # File Temp - Prima copia su file temp poi rename in base a gestione duplicati
+        sFileTemp=NF_PathMake(sDest,sFile,"temp")
     else:
-        sFileDest=sDest        
+        sFileDest=sDest
 
-# File Temp - Prima copia su file temp poi rename in base a gestione duplicati
-    sFileTemp=NF_PathMake(sDest,sFile,"temp")
-    
-# Copia 
+# Copia
     if sResult=="":
-        try:       
+        try:
             shutil.copy(sSource, sDest)
         except Exception as e:
-            sResult=getattr(e, 'message', repr(e)) + "fle copy " + sSource + ", in " + sDest                    
+            sResult=getattr(e, 'message', repr(e)) + "fle copy " + sSource + ", in " + sDest
 
 # Gestione in caso ci sia già. Se Tenere Old già rinomina
     if sResult=="":
         if NF_FileExist(sDest):
             if bOld:
-                sFileOld=NF_PathMake(sDest,sFile,sExt)
+                sFileOld=NF_PathMake(sDest,sFile + "_old",sExt)
                 sResult=NF_FileRename(sFileDest,sFileOld)
             else:
                 sResult=NF_FileDelete(sFileDest)
@@ -201,9 +228,28 @@ def NF_FileCopy(sSource, sDest, **kwargs):
 # Rinomina Temp in Dest
     if sResult=="":
          sResult=NF_FileRename(sFileTemp,sFileDest)
- 
+
+# Toglie sorgente, tenendo conto old anche qui
+    if sResult=="" and bMove:
+        if bOld:
+            sFileOld=NF_PathMake(sSource + "_old",sExt)
+            sResult=NF_FileRename(sSource, sFileOld)
+        else:
+            sResult=NF_FileDelete(sSource)
+
 # Uscita
-    return NF_ErrorProc(sResult,sProc)   
+    return NF_ErrorProc(sResult,sProc)
+
+# Move: - copy wrapped
+def NF_FileMove(sSource,sDest):
+    sResult=""
+    sProc="File.Move"
+
+# Default MOVE e DEST=PATH
+    sResult=NF_FileCopy(sSource,sDest,pathdest=True, move=True)
+
+# Uscita
+    return NF_ErrorProc(sResult,sProc)
 
 # Ritorna Errore Standard NF_FileExist o "" come stringa.
 def NF_FileExistErr(sFilename):
@@ -404,7 +450,7 @@ def NF_PathCopy(sPathIn, sPathOut, sType="F"):
 def NF_PathDirExists(sPath):
     return Path(sPath).is_dir()
 
-# Cerca un Path, anche ricorsivo con jolly e crea un array
+# Cerca un Path, anche ricorsivo con jolly e crea un array di files
 # R=Recursivo
 # Ritorna lResult, 0=Risultato, 1=Lista
 def NF_PathFind(sPath, sType=""):
@@ -605,14 +651,65 @@ def NF_ParamVerify(dictParams, **kwargs):
 
 # ------------------------------- TEMPO E DATE -------------------------
 
-# B=Base(def), N=Normal, X=Esteso
-def NF_TS_ToDict(dtDate,sType="B"):
+# Differenza tra due timestamp
 
+# Da Dict a TS
+# Input:
+#   dtDateTime, output (S o D)
+# Ritorna sResult,sTS (sResult!="" errore)
+# sOutput. S=TS.String, D=Date
+def NF_TS_FromDict(dtDate, sOutput="S"):
+    dictID={0:"Y", 1:"M", 2:"D", 3:"HH", 4:"MM", 5:"SS", 6:"DW", 7:"DY", 8:"DY", 9:"IY", 10:"YW", 11:"YD"}
+    sProc="TS_FromDict"
+    sResult=""
+    dtTS=None
+    vDateResult=""
+
+# Verifica
+    if NF_DictLen(dtDate) != 12:
+        sResult="Error dict param"
+    for sKey in dtDate.Keys():
+        if NF_DictExistKey(dictID,sKey)==-1:
+            sResult="Error key not found " + sKey
+            break
+
+# Composizione
+    if sResult=="":
+        dtTS=datetime.datetime(dtDate["Y"],
+            dtDate["M"],
+            dtDate["D"],
+            dtDate["HH"],
+            dtDate["MM"],
+            dtDate["SS"])
+
+# Composizione
+    if sOutput=="S":
+        VDateResult=NF_TS_ToStr()
+    elif sOutput=="D":
+        vDateResult=dtTS
+    else:
+        sResult="Output reslt not correct " + sOutput
+
+# Ritorno
+    sResult=NF_ErrorProc(sResult, sProc)
+    return sResult, vDateResult
+
+# Da formato Data a Stringa
+# Input:
+#    dtDate: Data Input
+# Opzionali
+#    sType=(sType, default="B"): Aggiunge IsoCalendar o No, Type=B=Base(def), N=Normal, X=Esteso
+# Ritorno
+#    sTS(TimeStamp)
+
+def NF_TS_ToDict(dtDate, sType="B"):
 # Setup
     tt=dtDate.timetuple
     dictTime=dict()
     nID=0
     dictID={0:"Y", 1:"M", 2:"D", 3:"HH", 4:"MM", 5:"SS", 6:"DW", 7:"DY", 8:"DY", 9:"IY", 10:"YW", 11:"YD"}
+    sProc="TS.ToDict"
+    sResult=""
 
 # Scomposizione
 # Assegna e incrementa Indice
@@ -633,26 +730,54 @@ def NF_TS_ToDict(dtDate,sType="B"):
 # Ritorno
     return dictTime
 
-# TIMESTIME: ToStr
-# L=Light, P(o altro)=Python
-# L=YYYYMMDD.HHMMSS, P=YYYYMMDD.HHMMSS.MILLISEC
-def NF_TS_ToStr(sType="L", sOld=""):
+# TIMESTIME: ToStr Quello attuale
+# Parametri:
+#  sType: L(default)=YYYYMMDD.HHMMSS, X=YYYYMMDD.HHMMSS.MILLISEC
+# Parametri opzionali
+#  sOld(old): TimeStampstr Vecchia data a cui non deve coincidere
+#  from_dict=FromDict da convertire
+# Ritorno:
+#  lResult=[sResult, sTimeStamp]
+def NF_TS_ToStr(sType, **kwargs):
     sResult=""
-    sProc="NF_TS_ToStr"
+    sProc="TS_ToStr"
+    bDateFrom=False
+    sTS=""
+    sOld=""
 
-# TimeStamp
+# NOW DATETIME
     now=datetime.today()
-    #print(sProc, sResult, sOld, sType)
+    vDateTime=now
+    if sType=="": sType="L"
 
-# Conversione
-    if sType=="X":
-        sResult=NF_DateStrYYYYMMDD(now) + "." + NF_TimeStrHHMMSS(now) + "." + str(now.microsecond)
-    else:
-        sResult=NF_DateStrYYYYMMDD(now) + "." + NF_TimeStrHHMMSS(now)
+# Parametri opzionali
+    for key,value in kwargs:
+        if key=="from_dict":
+            sResult,vDateTime=NF_TS_FromDict(value,"D")
+        elif key=="old":
+            sOld=value
+        else:
+            sResult="key not correct " + key
+
+# Conversione in base al tipo
+    if sResult=="":
+        if sType=="X":
+            sTS=NF_DateStrYYYYMMDD(vDateTime) + "." + NF_TimeStrHHMMSS(vDateTime) + "." + str(vDateTime.microsecond)
+        elif sType=="L":
+            sTS=NF_DateStrYYYYMMDD(vDateTime) + "." + NF_TimeStrHHMMSS(vDateTime)
+        else:
+            sResult="Type not corrent: " + sType
 
 # Loop deve essere diverso dal vecchio se specificato
-    while sResult==sOld:
-        sResult=NF_TS_ToStr(sType, sOld)
+    if (sResult=="") and (sOld != ""):
+        while sTS==sOld:
+            lResult=NF_TS_ToStr(sType, old=sOld)
+            sTS=lResult[1]
+
+# Uscita
+    #print(sProc, sResult, sOld, sType, sTS)
+    lResult=[NF_ErrorProc(sResult,sProc), sTS]
+    return lResult
 
 # Uscita
     return sResult
@@ -719,19 +844,24 @@ def NF_TimeStrHHMMSS(tmTime):
     sResult=NF_StrLeft(sResult,6)
     return sResult
 
-#  ------------- OS.INTERFACE ---------------------
+# DateTime to AAAAMMDD.HHMMSS
+# Checl if DateTime
+# Return status, string AAAAMMDD.HHMMSS
+def NF_DateTime_DTHH(vDateTime):
+    sResult=""
+    sDateTime=""
+    sProc="DateTim.AAAAMMDD.HHMMSS"
 
-def NF_IsWindows():
-    if  platform=="win32":
-        return True
-    else:
-        return False
+    try:
+        sDateTime=datetime.strptime(vDateTime, "%d%b%Y.%H%M%S")
+    except Exception as e:
+        sResult=getattr(e, 'DateTime convert ', repr(e))
 
-def NF_IsLinux():
-    if  platform=="linux":
-        return True
-    else:
-        return False
+# Ritorno
+    sResult=NF_ErrorProc(sResult, sProc)
+    return sResult, sDateTime
+
+
 
 #  ------------- DIAGNOTICA E GESTIONE ERRORI ---------------------
 
@@ -887,7 +1017,6 @@ def NF_StrJoin(**kwargs):
             vResult=iif(bNofixe,"",sPrefix) + vResult + iif(bNofixe,"",sSuffix)
             if sResult != "": sResult = sResult + iif(bNode, "", sDelim)
             sResult=sResult + str(vResult)
-
 # Ritorno
     return sResult
 
@@ -1192,6 +1321,18 @@ def	NF_ArraySort(avArray, sMode="A"):
 # Return
     return NF_Result(sResult,sProc,avResult)
 
+def NF_IsWindows():
+    if  platform=="win32":
+        return True
+    else:
+        return False
+
+def NF_IsLinux():
+    if  platform=="linux":
+        return True
+    else:
+        return False
+
 # Param is Array
 def NF_IsArray(aParams):
     t=type(aParams)
@@ -1334,7 +1475,7 @@ def NF_DictExistKeys(dictData, avKeys):
         sResult="Array Keys to find empty"
 # Verifica Keys
     if (sResult==""):
-        
+
         lResult=NF_DictKeys(dictData)
         sResult=lResult[0]
         if sResult=="":
@@ -1454,6 +1595,20 @@ def NF_DictMerge2(dictSource, dictAdd):
 
 # Uscita
     return dictEnd
+
+# DictReplace. sResult=Errore se dictParams non esiste
+# --------------------------------------------------------------------------------------
+def NF_DictReplace(dictParams, sKey, vValue):
+    sProc="NF_DictReplace"
+    sResult=""
+
+    if NF_IsDict(dictParam):
+        sResult="Not dict"
+    else:
+        dictParam[sKey]=vValue
+
+# Ritorno
+    return NF_ErrorProc(sResult, sProc), dictResult
 
 # Sort Dictionary from Keys/Values
 # lResult 0=Status, 1=DictResult

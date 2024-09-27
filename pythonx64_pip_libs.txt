@@ -1,36 +1,3 @@
-
-X:\_ntgcorp>REM @ECHO OFF 
-
-X:\_ntgcorp>REM ESECUZIONE PYTHON ambiente NTJOBS: VERSIONE 20220104 
-
-X:\_ntgcorp>SET PY_SCRIPT=pyn 
-
-X:\_ntgcorp>SET PY_P0=X:\_ntgcorp\ 
-
-X:\_ntgcorp>REM VERIFICA QUALE FOLDER E' PRESENTE X32 o X64	 
-
-X:\_ntgcorp>IF EXIST X:\_ntgcorp\PYTHONX64\*.* SET PY_PATH=X:\_ntgcorp\PYTHONX64 
-
-X:\_ntgcorp>IF EXIST X:\_ntgcorp\PYTHONX32\*.* SET PY_PATH=X:\_ntgcorp\PYTHONX32 
-
-X:\_ntgcorp>REM COMANDI ESTESI (sempre minuscoli) 
-
-X:\_ntgcorp>IF "pip" == "x" GOTO :X 
-
-X:\_ntgcorp>REM VERIFICA FORZATURA 
-
-X:\_ntgcorp>IF X64 == X32 SET PY_PATH=X:\_ntgcorp\PYTHONX32 
-
-X:\_ntgcorp>IF X64 == X64 SET PY_PATH=X:\_ntgcorp\PYTHONX64 
-
-X:\_ntgcorp>SET PY_CMD=X:\_ntgcorp\PYTHONX64\APP\PYTHON\PYTHON.EXE 
-
-X:\_ntgcorp>IF NOT EXIST X:\_ntgcorp\PYTHONX64\APP\PYTHON\PYTHON.EXE GOTO :ERR 
-
-X:\_ntgcorp>ECHO PARAMETRI pyn -  - X:\_ntgcorp\PYTHONX64\APP\PYTHON\PYTHON.EXE - pip list        
-PARAMETRI pyn -  - X:\_ntgcorp\PYTHONX64\APP\PYTHON\PYTHON.EXE - pip list       
-
-X:\_ntgcorp>X:\_ntgcorp\PYTHONX64\APP\PYTHON\PYTHON.EXE -m pip list        
 Package                           Version
 --------------------------------- ----------
 antiorm                           1.2.1
@@ -122,5 +89,3 @@ Werkzeug                          2.0.2
 wheel                             0.37.1
 wsproto                           1.0.0
 zope.interface                    5.4.0
-
-X:\_ntgcorp>GOTO :END 

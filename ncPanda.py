@@ -207,3 +207,46 @@ class NC_PANDA_XLS:
 # Fine
         sResult=nlSys.NF_ErrorProc(sResult, sProc)
         return sResult,nRows,nCols
+
+# Comine more xls/xlsx into one and sheets in list
+# Parameters:
+#    asFilesin (files_in): Array
+#    sFileout (file_out)
+#    asSheets(sheets)
+    def xls_combine(self, **kwargs):
+
+# Argomenti opzionali
+        for key, value in kwargs.items():
+            if key=='append':
+                bAppend=value
+            elif key=='NoOpen':
+                bNoOpen=value
+            elif key=='NoClose':
+                bNoClose=value
+            else:
+                sResult="Parameter invalid " + key
+
+# Merge
+        if sResult=="":
+            sFiles=NF_StrMerge(asFiles)
+            nlSys.NF_DebugFase(True, "merge xls. sFiles: " + sFiles + ", sheets: " + sSheets + ", Result: " + sResult, sProc)
+
+
+print("Combine xls and xlsx")
+cwd = os.path.abspath('')
+files = os.listdir(cwd)
+## get all sheets of a given file
+df_total = pd.DataFrame()
+for file in files:                         # loop through Excel files
+    if file.endswith('.xls') or file.endswith('.xlsx'):
+        excel_file = pd.ExcelFile(file)
+        sheets = excel_file.sheet_names
+        for sheet in sheets:               # loop through sheets inside an Excel file
+            print (file, sheet)
+            df = excel_file.parse(sheet_name = sheet)
+            df_total = df_total.append(df)
+print("Loaded, ENTER to combine:")
+dali=input()
+df_total.to_excel('Combined/combined_file.xlsx')
+print("Done")
+dali=input()

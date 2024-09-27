@@ -7,15 +7,17 @@
 from ncJobsApp import NC_Sys
 from ncJobsOS import NC_Jobs
 import nlJobsCmd as objJobs
+import nlSys
 
 # Setup OGGETTI GLOBALI
 jData=None
 objJobs=None
 JOBS_WAIT_STD=120
+NT_ENV_TEST=False
 
 # Start NTJOBSOS (NJOS)
 # -----------------------------------------------------------------------------
-def NJOS_Start(*args):
+def Start(*args):
     global objJobs,jData
     jData=NC_Sys("JOBSOS")                          # Application Object
     jData.bINI=False                                # Ini Presente
@@ -24,7 +26,7 @@ def NJOS_Start(*args):
         "NJOS.START", "NJOS.LOOP",                  # NTJOBSOS ACTIONS
         "NJOS.RESTART","NTJOS.QUIT",
         "XLS2CSV","CSV2XLS" ]                       # CONVERSIONI XLS-cCSV
-    jData.cbActions=JOBS_cbActions                  # CallBack Azioni
+    jData.cbActions=cbActions()
 
  # Test File
  #jData.sIniTest="Test\Test_jobsos.ini"           # Test file
@@ -52,14 +54,14 @@ def NJOS_Start(*args):
 # --------------------------------- BODY SINGOLE AZIONI ----------------------
 
 # CallBack Azioni
-def NJOS_cbActions(dictParams):
+def cbActions(dictParams):
     sProc="NTD_cbActions"
     global objJobs
 
 # Setup per Ritorno
     lResult=["",{},{}]
     sAction=dictParams["ACTION"]
-    nlSys.NF_DebugFase(NT_ENV_TEST_NTD, "Start Azione: " + sAction, sProc)
+    nlSys.NF_DebugFase(NT_ENV_TEST, "Start Azione: " + sAction, sProc)
 
 # Azioni dell'App
 # -------------------------------- NJOS ----------------------
@@ -74,16 +76,16 @@ def NJOS_cbActions(dictParams):
 # -------------------------------- ALTRE AZIONI ----------------------
     elif sAction=="XLS2CSV":
 # Read the Exsycel file
-        sResult=cmd_XLS2CSV(sFileIn=dictArgs[0],sFileOut=dictArgs[1])
+        sResult=objJobs.cmd_XLS2CSV(sFileIn=dictArgs[0],sFileOut=dictArgs[1])
 # Write CSV to XLS
     elif sAction=="CSV2XLS":
-        sResult=cmd_CSV2XLS(sFileIn=dictArgs[0],sFileOut=dictArgs[1])
+        sResult=objJobs.cmd_CSV2XLS(sFileIn=dictArgs[0],sFileOut=dictArgs[1])
 # ----------------------------- FINE AZIONI -------------------------
     else:
         sResult="Azione Non trovata: " + sAction
 
 # Ritorno
-    nlSys.NF_DebugFase(NT_ENV_TEST_NTD, "End Azione: " + sAction + ": " + sResult, sProc)
+    nlSys.NF_DebugFase(NT_ENV_TEST, "End Azione: " + sAction + ": " + sResult, sProc)
     sResult=nlSys.NF_ErrorProc(sResult,sProc)
     lResult=[sResult]
     return lResult

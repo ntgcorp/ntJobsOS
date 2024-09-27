@@ -80,8 +80,7 @@ class NC_LOG:
             nlSys.NF_DebugFase(NT_ENV_TEST_LOG, "Test Log Write " + self.sLogFile + ", Result: " + sResult, sProc)
 
     # Uscita
-        sResult=nlSys.NF_ErrorProc(sResult, sProc)
-        return sResult
+        return nlSys.NF_ErrorProc(sResult, sProc)
 
 # LOG RESET, SOLO HEADER (DA RICHIAMARE POI IN LOG DOPO TEST
     def Reset(self, **kwargs):
@@ -100,9 +99,8 @@ class NC_LOG:
         if self.sLogFile=="": self.sLogFile=nlSys.NF_PathMake(nlSys.NF_PathCurDir(),self.sLogName,"log")
 
     # Scrive Header
-        sHeader=nlSys.NF_StrJoin(fast=True, delim=sDelim, text=["TS","TYPE","CAT","USER","TEXT"])
+        sHeader=nlSys.NF_StrJoin(fast=True, delim=self.sDelim, text=["TS","TYPE","CAT","USER","TEXT"])
         sResult=nlSys.NF_FileWrite(self.sLogFile,sHeader + "\n","w")
 
     # Uscita
-        sResult=nlSys.NF_ErrorProc(sResult, sProc)
-        return sResult
+        return nlSys.NF_ErrorProc(sResult, sProc)        
