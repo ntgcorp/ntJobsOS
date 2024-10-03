@@ -7,7 +7,14 @@ Alpha Release - Not working - Under development
 
 See index.xlsx for files list
 
+Requirements: For Windows, PythonX64.7z (Portable Linux) or apply requirements.txt if you have your Python Virtual Enviroment or Linux Pyyhon. See ntjobs_download.link to download it
+
 http://www.ntgcorp.it/ntjobs
+
+https://drive.google.com/drive/folders/1LE2lc7mdW9kKMZOPh1Yoo6eADkx8E5JT?usp=drive_link
+
+Execution: Python ntJobs.py action -parameter_key -parameter_value eccc...
+
 
 ----------------- ntJobsPy Conventions --------------------------
 

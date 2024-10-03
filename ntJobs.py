@@ -8,9 +8,10 @@
 # ------------------------------------------------------------------------------
 import nlSys, nlExt
 import os
+import nlDataFiles
 
 # Test Mode
-NT_ENV_TEST_JOBSA=True
+NT_ENV_TEST_APP=True
 
 # Start App
 # -----------------------------------------------------------------------------
@@ -20,7 +21,9 @@ def Start():
     bDebug=True
     nArgs=0
     dictArgs={}
-    sTS_Start=NF_TimeStrHHMMSS()
+    lResult=nlSys.NF_TS_ToStr("")
+    print("Time:" + str(lResult))
+    sTS_Start=lResult[1]
 
 # CurrentDir = ScriptDir.
 # Dichiarare TIMESTAMP.START e TIMESTART.END
@@ -29,27 +32,39 @@ def Start():
     os.chdir(sCurDir)
 
 # Prende Argomenti
-#    nlSys.NF_DebugFase(bDebug,"", sProc)
-#    lResult=nlSys.NF_Args([])
-#    sResult=lResult[0]
-#    if (sResult==""):
-#        dictArgs=lResult[1]
-#        nArgs=nlSys.NF_DictLen(dictArgs)
-#    else:
-#        sResult=nlSys.NF_ErrorProc(sResult,sProc)
-#        return sResult
+    nlSys.NF_DebugFase(bDebug,"Check Argomenti", sProc)
+    lResult=nlSys.NF_Args([])
+    sResult=lResult[0]
+    if (sResult==""):
+        dictArgsTemp=lResult[1]
+
+# Conversione args ntjobs (lettura ini o trasformazione in dict parametri)
+    if (sResult==""):
+        nlSys.NF_DebugFase(bDebug,"Conversione Argomenti", sProc)
+        lResult=NF_ArgsJobs(dictArgsTemp)
+        sResult=lResult[0]
+        if sResult=="":
+            dictArgs=lResult[1]
 
 # Altro check e prende comando
-#   nlSys.NF_DebugFase(bDebug,"Argomenti: " + str(nArgs)  + ", valori: " + str(dictArgs), sProc)
-#    if nArgs<1:
-#        sResult="naJobs Argomenti: comando, ...Altri parametri"
-#    else:
-#        sCmd=dictArgs[0].upper()
-#        dictArgs.update({'cmd':sCmd})
+    if sResult=="":
+        nArgs=nlSys.NF_DictLen(dictArgs)
+        nlSys.NF_DebugFase(bDebug,"Argomenti: " + str(nArgs)  + ", valori: " + str(dictArgs), sProc)
+        if nArgs<1:
+            sResult="naJobs Argomenti: comando, ...Altri parametri"
+        else:
+            sAction=dictArgs['ACTION'].upper()
+            dictArgs.update({'ACTION':sAction})
 
 # Comandi. caricando moduli utilizzati
 # -----------------------------------------------------------------------------
- #  nlSys.NF_DebugFase(bDebug,"Post Parsing Args. , cmd: " + sCmd + ", Args: " + str(dictArgs),sProc)
+    if sResult=="":
+        nlSys.NF_DebugFase(bDebug,"Post Parsing Args. , ACTION: " + sAction + ", Args: " + str(dictArgs),sProc)
+        lResult=cbActions(dictArgs)
+        sResult=lResult[0]
+
+# Fine
+    return nlSys.NF_ErrorProc(sResult,sProc)
 
  # CallBack Azioni
 def cbActions(dictParams):
@@ -62,20 +77,21 @@ def cbActions(dictParams):
     nlSys.NF_DebugFase(NT_ENV_TEST_APP, "Start Azione: " + sAction, sProc)
 
     if sAction=="NJOS.START":
-        sResult=cmdNJOS()
+        sResult=cmdNJOS_Start(dictParams)
     elif sAction=="XLS.MERGE":
-        sResult=cmdXLS_Merge()
+        sResult=cmdXLS_Merge(dictParams)
     elif sAction=="XLS.SPLIT":
-        sResult=cmdXLS_Split()
+        sResult=cmdXLS_Split(dictParams)
     elif sAction=="NJOS.END":
-        sResult=cmdXLS_Split()
+        sResult="To do " + sAction
     elif sAction=="NJOS.RESTART":
-        sResult=cmdXLS_Split()
-    elif sAction=="NJOS.SHUTDOWN":
-        sResult=cmdXLS_Split()
+        sResult="To do " + sAction
+    elif sAction=="PATH.MIRROR":
+        sResult=cmdPATH_Mirror(dictParams)
+    elif sAction=="TEST":
+        sResult=cmdTest(dictParams)
     else:
-        sResult="Comando non riconosciuto " + Action
-
+        sResult="Comando non riconosciuto " + sAction
 
 # Ritorno
     sResult=nlSys.NF_ErrorProc(sResult,sProc)
@@ -93,7 +109,7 @@ def cmdNJOS_Start():
 
 # LOOP
     if sResult=="":
-        do while objJobOS.bExitFull==False:
+        while objJobOS.bExitFull==False:
             nlSys.NF_DebugFase(bDebug,"NJOS Loop",sProc)
             sResult=objJobOS.Loop()
 
@@ -104,55 +120,67 @@ def cmdNJOS_Start():
 # FINE
     return nlSys.NF_ErrorProc(sResult,sProc)
 
-def cmdNJOS_Shutdown():
+def cmdNJOS_Shutdown(dictParams={}):
     sProc="CMD.SHUTDOWN"
     sResult=""
 
 # FINE
     return nlSys.NF_ErrorProc(sResult,sProc)
 
-def cmdNJOS_End():
+def cmdNJOS_End(dictParams={}):
     sProc="CMD.NJOS.END"
     sResult=""
 
 # FINE
     return nlSys.NF_ErrorProc(sResult,sProc)
 
-def cmdNJOS_Restart():
+def cmdNJOS_Restart(dictParams={}):
     sProc="CMD.NJOS.RESTART"
     sResult=""
 
 # FINE
     return nlSys.NF_ErrorProc(sResult,sProc)
 
-def cmdXLS_Merge():
+def cmdXLS_Merge(dictParams={}):
     sProc="CMD.XLS.MERGE"
     sResult=""
 
 # FINE
     return nlSys.NF_ErrorProc(sResult,sProc)
 
-def cmdXLS_Split():
+def cmdXLS_Split(dictParams={}):
     sProc="CMD.XLS.SPLIT"
     sResult=""
 
 # FINE
     return nlSys.NF_ErrorProc(sResult,sProc)
 
-def cmdPATH_Mirror():
+def cmdTest(dictParams={}):
+    sProc="CMD.TEST"
+    sResult=""
+
+    print("Test command")
+
+    for key in dictParams.keys():
+        value=dictParams[key]
+        print("Param: " + key + ", Value: " + value)
+
+# FINE
+    return nlSys.NF_ErrorProc(sResult,sProc)
+
+def cmdPATH_Mirror(dictParams):
     sProc="CMD.PATH.MIRROR"
     sResult=""
-    global jData
 
 # Verifica Folder IN e Folder Out
-    asFiles=nlSys.NF_DictGet(jData.dictINI,"FILES",None)
-    sResult=nlSys.NF_ParamVerify(jData.dictINI, {"dexist": ("IN.GITDIR","OUT.GITDIR"),"fexist": asFiles})
+    asFiles=nlSys.NF_DictGet(dictParams,"FILES",None)
+    sResult=nlSys.NF_ParamVerify(dictParams, {"dexist": ("IN.PATH","OUT.PATH"),"fexist": asFiles})
 
 # Mirror
     if sResult=="":
         nlSys.NF_DebugFase(NT_ENV_TEST_APP, "Mirror", sProc)
-        sPathIn=nlSys.NF_DictGet(jData.dIctIni,"IN.GITDIR","")
-        sPathOut=nlSys.NF_DictGet(jData.dIctIni,"OUT.GITDIR","")
+        sPathIn=nlSys.NF_DictGet(dictParams,"IN.PATH","")
+        sPathOut=nlSys.NF_DictGet(dictParams,"OUT.PATH,"")
         for sFile in asFiles:
             sFileIn=nlSys.NF_PathMake(sPathIn,sFile,"")
             sTemp=nlSys.NF_FileCopy(sFile,sPathOut,replace=True, outpath=True)
@@ -161,6 +189,62 @@ def cmdPATH_Mirror():
 
 # FINE
     return nlSys.NF_ErrorProc(sResult,sProc)
+
+# --------------------------------- INTERNAL -------------------------------------
+
+# Interpreta Args come ntJobs con action e -parametro oppure se unico e finisce per .ini lo legge tutto e interpreta
+def NF_ArgsJobs(dictArgs):
+    sProc="ARGS.JOBS"
+    sResult=""
+    dictResult={}
+    sType="A"   # A=Argomenti, I=FileIni
+    sAction=""
+    sArgs=""
+
+# Determina tipologia arg o ini
+    nLen=nlSys.NF_DictLen(dictArgs)
+    if nLen==1:
+        sArgs=str(dictArgs[0])
+        #sArgs=sArgs.lower
+        print("Args: " + sArgs)
+        if sArgs.endswith("ini"): sType="I"
+    nlSys.NF_DebugFase(NT_ENV_TEST_APP, "Args.Num:" + str(nLen) + ", sType: " + sType, sProc)
+
+# Caso "I": Deve essere con [CONFIG]
+    if sType=="I":
+        lResult=nlDatafiles.NF_INI_Read(sArg)
+        if sResult=="":
+            dictTemp=dict(lResult[1]).copy()
+            dictResult=dictTemp["CONFIG"].copy()
+
+# Caso "A" (tutti devono essere nella forma -key value, quelli senza key davanti vengono scartati)
+    else:
+        sKey=""
+        sValue=""
+        nIndex=0
+        avKeys=dictArgs.keys()
+        for key in avKeys:
+            value=str(dictArgs[key])
+# Il primo è il comando
+            if nIndex==0:
+                dictResult["ACTION"]=value
+                sAction=value
+# Si aspetta comandi inizianti per "-"
+            elif value.startswith("-"):
+                sKey=value[1:]
+                sValue=""
+# Deve essere il valore
+            else:
+                if sKey != "":
+                    sValue=str(value).strip()
+                    dictResult[sKey]=sValue
+                    sKey=""
+# Indice di args
+            nIndex = nIndex + 1
+
+    nlSys.NF_DebugFase(NT_ENV_TEST_APP, "ntJob Args: " + sType + ", ACTION: " + sAction + ", Params: " +  str(dictResult), sProc)
+    lResult=[sResult, dictResult]
+    return lResult
 
 # --------------------------------- MAIN -------------------------------------
 def main():

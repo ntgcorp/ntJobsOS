@@ -34,10 +34,10 @@ NT_ENV_ENCODING="utf-8"
 NT_ENV_DATE_DIV="."
 
 # ----------------------- DA ARG A DICT ---------------------------
-# Ritorna Array
+# Ritorna Dictionary. N:Valore
 # Optional Arguments. Array "-argLight", "-arg", "help", required_true, default
 # Result lResult. 0=sResult, 1=dictArgs o vuoto dict
-def NF_Args(axArgs):
+def NF_Args(axArgs=[]):
     sProc="NF_Args"
     bParse=False
     sResult=""
@@ -58,12 +58,12 @@ def NF_Args(axArgs):
         else:
             pass
 
-# Converte in Array
-    NF_DebugFase(True,"Parsing Argomenti " + str(bParse), sProc)
-
+# Converte in Dictionary con 2 modalità
+    NF_DebugFase(True,"Parsing Argomenti (" + str(bParse) + "), Argomenti: " + str(sys.argv), sProc)
     if bParse==True:
         parser=argparse.ArgumentParser()
         dictArgs=vars(parser.parse_args())
+# Converte in Dictionary 0:Arg1, 1:Arg2
     else:
         #   lResult[0]: Diagnostica di ritorno. ""=NoError,
         #   lResult[1]: Dict,
@@ -741,7 +741,6 @@ def NF_TS_ToDict(dtDate, sType="B"):
 def NF_TS_ToStr(sType, **kwargs):
     sResult=""
     sProc="TS_ToStr"
-    bDateFrom=False
     sTS=""
     sOld=""
 
@@ -779,9 +778,6 @@ def NF_TS_ToStr(sType, **kwargs):
     lResult=[NF_ErrorProc(sResult,sProc), sTS]
     return lResult
 
-# Uscita
-    return sResult
-
 # TIMESTIME: ToStr. Ritorna lresult, 0=sResult, 1=Date, 2=Time, 3=Msec
 # sDateTime: DATE.TIME[.MSEC]
 def NF_TS_FromStr(sDateTime):
@@ -790,7 +786,8 @@ def NF_TS_FromStr(sDateTime):
     nMsec=0
 
 # Split
-    if sDateTime=="": sResult="NoDateTime"
+    if (sDateTime==""):
+        sResult="NoDateTime"
     if (sResult==""):
         asDate=sDateTime.split(NT_ENV_DATE_DIV)
         asDate=NF_ArrayStrNorm(asDate,"SLR")
@@ -1503,18 +1500,19 @@ def NF_DictFromArr(asHeader, avData):
 # Verifica Componenti
     lHType=len(asHeader)
     lHData=len(avData)
-    bVerify = NF_IsArray(asHeader) and NF_IsArray(avData)
 
 # Caso Header non passato, riempito di numeri 0..N
-    if bVerify and lHType==0:
+    if lHType==0:
         asHeader=list(range(0,lHData))
+# Verifica
+    bVerify=False
+    if NF_IsArray(asHeader) and NF_IsArray(avData):
+        if NF_ArrayLen(asHeader)>0 and NF_ArrayLen(avData)>0: bVerify=True
 
 # Verifica lunghezza uguale (salvo zero allora lista 0..n
     if bVerify:
         bVerify = (lHType != lHData)
-        sResult=iif(bVerify, "", "lunghezze diverse: H=" + str(lHType) + ", D=" + str(lHData))
-    else:
-        sResult="Tipi diversi header/data, non array"
+        sResult=iif(bVerify, "", "lunghezze diverse: Header=" + str(lHType) + ", Data=" + str(lHData))
 
 # Esecuzione
     if sResult=="":
