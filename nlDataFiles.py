@@ -2,120 +2,13 @@
 # Lib  gestione file .IN, CSV, Altri Database (per Excel/CSV usare NC_Panda)
 # -----------------------------------------------------------------------------
 import nlSys
+import mariadb
+
 
 import configparser, csv, copy
 NT_ENV_TEST_DATAF = True
 sCSV_DELIMITER = ";"
 sCSV_QUOTE = '"'
-
-# INI: Ritorna Sezioni lette come dict di dict in lResult
-# Nomefile già normalizzato
-# Ritorna lResNF_DictStr: NF_DictExistKey.Key: ['ACTION', 'FILE.PDF', 'FILE.CSV', 'FIELDS.CSV', 'FIELD.KEY', 'FILE.PDF.PREFIX']ult 0=Ritorno, 1=IniDict, dove Trim/UCASE.KEY e valori "trimmati"
-# -----------------------------------------------------------------------------
-def NF_INI_Read(sFileINI):
-    sProc="NF_INI_Read"
-    sResult=""
-    dictINI=dict()
-
-# Verifica esistenza
-    sResult=nlSys.NF_FileExistErr(sFileINI)
-
-# Lettura INI Fase 1
-    if sResult=="":
-        try:
-            config=configparser.ConfigParser(allow_no_value=True)
-            config.read(sFileINI)
-            asSections=config.sections()
-        except:
-            sResult="apertura file INI " + sFileINI
-
-# Lettura INI Fase 2
-    if (sResult==""):
-    # Legge SEZIONE->KEYS, crea dict per ogni sections che aggiunge in dictINI
-        for sSection in asSections:
-            dictSection=dict()
-            #Lettura KEYS
-            for sKey in config[sSection]:
-                vValue=config[sSection][sKey]
-                # La chiave viene Trimmata+UCase
-                sKey=nlSys.NF_StrNorm(sKey)
-                # Trim Value e Str per sicurezza
-                vValue=(str(vValue)).lstrip().rstrip()
-                # Assegnazione di ritorno
-                dictSection[sKey]=vValue
-            # Assegna KEYS a SEZIONE
-            nlSys.NF_DebugFase(NT_ENV_TEST_DATAF, ", Tipo dictSection: " + str(type(dictSection)), sProc)
-            dictINI[sSection]=dictSection.copy()
-
-# Fine ciclo lettura INI
-    sResult=nlSys.NF_ErrorProc(sResult,sProc)
-    lResult=[sResult,dictINI]
-    #nlSys.NF_DebugFase(NT_ENV_TEST_DATAF, ", dictINI: " + nlSys.NF_DictStr(dictINI), sProc)
-    return lResult
-
-# INI: Salva
-# Nomefile già normalizzato. SEMPRE IN SCRITTURA. sE UPDATE USARE NF_INI_Update
-# Passato in forma dict di dict
-# Parametri:
-#  sFileINI=File
-#  dictINIs=INI doppio livello, sezione->dict
-#  sAttr=Attributo scrittura, w/a (non r)
-# Ritorna sResult
-# -----------------------------------------------------------------------------
-def NF_INI_Write(sFileINI, dictINIs, sAttr="w"):
-    sProc="NF_INI_Read"
-    sResult=""
-    sGroup=""
-
-# Verifica
-    if (sAttr != "w") and (sAttr != "a"): sResult="Attributo errato: " + sAttr
-
-# Setup
-    if sResult=="":
-        config = configparser.ConfigParser()
-# Per tutte le chiavi. Se inizia per #=Nome Sezione
-        for sGroup in nlSys.NF_DictKeys(dictINIs):
-            dictINI=dictINIs[sGroup]
-            for vKey in nlSys.NF_DictKeys(dictINI):
-                if not config.has_section(sGroup): config.add_section(sGroup)
-                config.set(sGroup,vKey,dictINI[vKey])
-
-# Salva File
-    lResult=nlSys.NF_FileOpen(sFileINI,sAttr)
-    sResult=lResult[0]
-    if sResult=="":
-        hFile=lResult[1]
-        config.write(hFile)
-    # Chiusura file
-        hFile.close()
-
-# Ritorno Scrittura
-    sResult=nlSys.NF_ErrorProc(sResult,sProc)
-    return sResult
-
-# INI: Update
-# Se esiste lo legge e update del dict passato come parametro
-# Parametri: sFileINI, dictINIs (con sezione)
-# Ritorno: sResult
-# -----------------------------------------------------------------------------
-def NF_INI_Update(sFileINI, dictINIs_update):
-    sProc="NF_INI_Update"
-    sResult=""
-
-# Se non Esiste va a INI_Write ed ESCE
-    if nlSys.NF_FileExist(sFileINI):
-# Legge INI
-        lResult=NF_INI_Read(sFileINI)
-        sResult=lResult[0]
-        if sResult=="":
-            dictINIs_read=lResult[1]
-        # Merge (del tipo 2o livello)
-            dictINIs_read=nlSys.NF_DictMerge2(dictINIs_read, dictINIs_update)
-        # Salva dictINI
-            sResult=NF_INI_Write(sFileINI, dictINIs_read)
-# Ritorno Scrittura
-    sResult=nlSys.NF_ErrorProc(sResult,sProc)
-    return sResult
 
 # ----------------------- CLASSI ---------------------------
 # CSV Class
@@ -472,7 +365,7 @@ class NC_DB:
     # SQLT. Cursor
             if sResult=="":
                 try:
-                    self.objCursor=objDB.cursor()
+                    self.objCursor=self.objDB.cursor()
                 except:
                     sResult="SqLite3 error cursor"
         elif self.sTypeDB=="MARIADB":
@@ -526,7 +419,7 @@ class NC_DB:
         avSQL
 
     # Check & Array To Execute
-        if NF_IsArray(avSQLparam)==False:
+        if nlSys.NF_IsArray(avSQLparam)==False:
             avSQL=[avSQLparam]
 
     # Esecuzione - Uscita al primo errore
@@ -547,7 +440,7 @@ class NC_DB:
                     sResult=str(e)
 
     # Uscita
-        return ntSys.NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 # ReadQuery()
 # DA VERIFICARE

@@ -26,6 +26,8 @@ import tempfile
 # Per Argomenti (NF_Args)
 import sys, argparse
 
+import configparser
+
 # Setup: TEST o NO
 NT_ENV_TEST_SYS=True
 # ENCODING
@@ -76,6 +78,64 @@ def NF_Args(axArgs=[]):
     lResult=[sResult, dictArgs]
     return lResult
 
+# ----------------------- FUNZIONI ARGOMENTI ---------------------------
+
+# Interpreta Args come ntJobs con action e -parametro oppure se unico e finisce per .ini lo legge tutto e interpreta
+def NF_ArgsJobs(dictArgs):
+    sProc="ARGS.JOBS"
+    sResult=""
+    dictResult={}
+    sType="A"   # A=Argomenti, I=FileIni
+    sAction=""
+    sArgs=""
+
+# Determina tipologia arg o ini
+    nLen=NF_DictLen(dictArgs)
+    if nLen==1:
+        sArgs=str(dictArgs[0])
+        sArgs=sArgs.lower()
+        if sArgs.endswith("ini"):
+            sType="I"
+            NF_DebugFase(NT_ENV_TEST_SYS, "Legge file ini:" + sArgs, sProc)
+    else:
+        NF_DebugFase(NT_ENV_TEST_SYS, "Argomenti:" + sArgs, sProc)
+
+# Caso "I": Deve essere con [CONFIG]
+    if sType=="I":
+        lResult=NF_INI_Read(sArgs)
+        if sResult=="":
+            dictTemp=dict(lResult[1]).copy()
+            dictResult=dictTemp["CONFIG"].copy()
+# Caso "A" (tutti devono essere nella forma -key value, quelli senza key davanti vengono scartati)
+    else:
+        sKey=""
+        sValue=""
+        nIndex=0
+        avKeys=dictArgs.keys()
+        for key in avKeys:
+            value=str(dictArgs[key])
+# Il primo è il comando
+            if nIndex==0:
+                dictResult["ACTION"]=value
+                sAction=value
+# Si aspetta comandi inizianti per "-"
+            elif value.startswith("-"):
+                sKey=value[1:]
+                sValue=""
+# Deve essere il valore
+            else:
+                if sKey != "":
+                    sValue=str(value).strip()
+                    dictResult[sKey]=sValue
+                    sKey=""
+# Indice di args
+            nIndex = nIndex + 1
+
+# Fine
+    NF_DebugFase(NT_ENV_TEST_SYS, "ntJob Args: " + sType + ", ACTION: " + sAction + ", Params: " +  str(dictResult), sProc)
+    lResult=[sResult, dictResult]
+    return lResult
+
 # ----------------------- FUNZIONI DI BASE ---------------------------
 
 # IIF che in python non c'è
@@ -86,7 +146,7 @@ def iif (bExpr, trueResult, falseResult):
 def NF_Kill(**kwargs):
     sProc="NF_Kill"
     sResult=""
-    PID=0
+    pid=0
 
 # Parameters
 # Iterating over the Python kwargs dictionary
@@ -142,7 +202,7 @@ def NF_Exec(**kwargs):
         if sExec_action=="":
             try:
                 vExec_pid=subprocess.call(sExec_cmd,sExec_args,capture_output=True)
-                if retcode<0: sResult="Errore in esecuzione: " + str(retcode)
+                if vExec_pid<0: sResult="Errore in esecuzione: " + str(vExec_pid)
             except OSError as e:
                 sResult="Errore Esecuzione " + str(e)
     else:
@@ -396,6 +456,115 @@ def	NF_FileRename(sPathIn, sPathOut):
 # Uscita
     return NF_ErrorProc(sResult,sProc)
 
+# INI: Ritorna Sezioni lette come dict di dict in lResult
+# Nomefile già normalizzato
+# Ritorna lResNF_DictStr: NF_DictExistKey.Key: ['ACTION', 'FILE.PDF', 'FILE.CSV', 'FIELDS.CSV', 'FIELD.KEY', 'FILE.PDF.PREFIX']ult 0=Ritorno, 1=IniDict, dove Trim/UCASE.KEY e valori "trimmati"
+# -----------------------------------------------------------------------------
+def NF_INI_Read(sFileINI):
+    sProc="NF_INI_Read"
+    sResult=""
+    dictINI=dict()
+
+# Verifica esistenza
+    sResult=NF_FileExistErr(sFileINI)
+
+# Lettura INI Fase 1
+    if sResult=="":
+        try:
+            config=configparser.ConfigParser(allow_no_value=True)
+            config.read(sFileINI)
+            asSections=config.sections()
+        except:
+            sResult="apertura file INI " + sFileINI
+
+# Lettura INI Fase 2
+    if (sResult==""):
+    # Legge SEZIONE->KEYS, crea dict per ogni sections che aggiunge in dictINI
+        for sSection in asSections:
+            dictSection=dict()
+            #Lettura KEYS
+            for sKey in config[sSection]:
+                vValue=config[sSection][sKey]
+                # La chiave viene Trimmata+UCase
+                sKey=NF_StrNorm(sKey)
+                # Trim Value e Str per sicurezza
+                vValue=(str(vValue)).lstrip().rstrip()
+                # Assegnazione di ritorno
+                dictSection[sKey]=vValue
+            # Assegna KEYS a SEZIONE
+            NF_DebugFase(NT_ENV_TEST_SYS, ", Tipo dictSection: " + str(type(dictSection)), sProc)
+            dictINI[sSection]=dictSection.copy()
+
+# Fine ciclo lettura INI
+    sResult=NF_ErrorProc(sResult,sProc)
+    lResult=[sResult,dictINI]
+    #nlSys.NF_DebugFase(NT_ENV_TEST_DATAF, ", dictINI: " + nlSys.NF_DictStr(dictINI), sProc)
+    return lResult
+
+# INI: Salva
+# Nomefile già normalizzato. SEMPRE IN SCRITTURA. sE UPDATE USARE NF_INI_Update
+# Passato in forma dict di dict
+# Parametri:
+#  sFileINI=File
+#  dictINIs=INI doppio livello, sezione->dict
+#  sAttr=Attributo scrittura, w/a (non r)
+# Ritorna sResult
+# -----------------------------------------------------------------------------
+def NF_INI_Write(sFileINI, dictINIs, sAttr="w"):
+    sProc="NF_INI_Read"
+    sResult=""
+    sGroup=""
+
+# Verifica
+    if (sAttr != "w") and (sAttr != "a"): sResult="Attributo errato: " + sAttr
+
+# Setup
+    if sResult=="":
+        config = configparser.ConfigParser()
+# Per tutte le chiavi. Se inizia per #=Nome Sezione
+        for sGroup in NF_DictKeys(dictINIs):
+            dictINI=dictINIs[sGroup]
+            for vKey in NF_DictKeys(dictINI):
+                if not config.has_section(sGroup): config.add_section(sGroup)
+                config.set(sGroup,vKey,dictINI[vKey])
+
+# Salva File
+    lResult=NF_FileOpen(sFileINI,sAttr)
+    sResult=lResult[0]
+    if sResult=="":
+        hFile=lResult[1]
+        config.write(hFile)
+    # Chiusura file
+        hFile.close()
+
+# Ritorno Scrittura
+    sResult=NF_ErrorProc(sResult,sProc)
+    return sResult
+
+# INI: Update
+# Se esiste lo legge e update del dict passato come parametro
+# Parametri: sFileINI, dictINIs (con sezione)
+# Ritorno: sResult
+# -----------------------------------------------------------------------------
+def NF_INI_Update(sFileINI, dictINIs_update):
+    sProc="NF_INI_Update"
+    sResult=""
+
+# Se non Esiste va a INI_Write ed ESCE
+    if NF_FileExist(sFileINI):
+# Legge INI
+        lResult=NF_INI_Read(sFileINI)
+        sResult=lResult[0]
+        if sResult=="":
+            dictINIs_read=lResult[1]
+        # Merge (del tipo 2o livello)
+            dictINIs_read=NF_DictMerge2(dictINIs_read, dictINIs_update)
+        # Salva dictINI
+            sResult=NF_INI_Write(sFileINI, dictINIs_read)
+# Ritorno Scrittura
+    sResult=NF_ErrorProc(sResult,sProc)
+    return sResult
+
 # Path Temporaneo. Parametri: sPathBase, sPrefix, Type="FD"
 # Ritorno: lResult 0=sResult, 1=PathCreato
 def NF_PathTemp(sPathBase="", sPrefix="", sType="F"):
@@ -483,6 +652,27 @@ def NF_PathScript(sType):
         sResult="NO.TYPE"
 # Ritorno
     return sResult
+
+# Remapping sFileIn, sFileOut
+# Return 3 parameters. sResult, New FileIn, New FileOut
+def NF_PathRemapInOut(sFileIn,sFileOut,sExtOut):
+    sResult=""
+    sProc="PathRemapInOut"
+
+# Check FileIn Exist
+    sResult,sFileIn=NF_FileExistMap(sFileIn)
+
+# FileOut create
+    if sResult=="":
+        if sFileOut=="" or sFileOut=="#":
+            sPath,sFile,sExt=NF_PathScompose(sFileIn)
+            NF_DebugFase(True, "FileIn. Path: " + sPath + ", File: " + sFile + ", Ext: " + sExt, sProc)
+            sFileOut=sPath + sFile + "." + sExtOut
+            NF_DebugFase(True, "FileOut " + sFileOut, sProc)
+
+# Fine
+    sResult=NF_ErrorProc(sResult, sProc)
+    return sResult,sFileIn,sFileOut
 
 # Path Rimappato con Dir Corrente
 # Argomenti per ora non usato
@@ -738,7 +928,7 @@ def NF_TS_ToDict(dtDate, sType="B"):
 #  from_dict=FromDict da convertire
 # Ritorno:
 #  lResult=[sResult, sTimeStamp]
-def NF_TS_ToStr(sType, **kwargs):
+def NF_TS_ToStr(sType="L", **kwargs):
     sResult=""
     sProc="TS_ToStr"
     sTS=""
@@ -857,8 +1047,6 @@ def NF_DateTime_DTHH(vDateTime):
 # Ritorno
     sResult=NF_ErrorProc(sResult, sProc)
     return sResult, sDateTime
-
-
 
 #  ------------- DIAGNOTICA E GESTIONE ERRORI ---------------------
 
@@ -1198,6 +1386,10 @@ def NF_ArrayCountValue(avArray, vValue, sMode=""):
 
 # Uscita
     return nResult
+
+# Rimuove Duplicati da Array
+def NF_ArrayRemoveDups(avArray):
+    return list(dict.fromkeys(avArray))
 
 # Rimuove Elementi da Array, Restituendo nuovo Array. avRemove contiene indici numerici nel range
 # Ritorna lResult 0=Status, 1=Array
@@ -1600,13 +1792,13 @@ def NF_DictReplace(dictParams, sKey, vValue):
     sProc="NF_DictReplace"
     sResult=""
 
-    if NF_IsDict(dictParam):
+    if NF_IsDict(dictParams):
         sResult="Not dict"
     else:
-        dictParam[sKey]=vValue
+        dictParams[sKey]=vValue
 
 # Ritorno
-    return NF_ErrorProc(sResult, sProc), dictResult
+    return NF_ErrorProc(sResult, sProc), dictParams
 
 # Sort Dictionary from Keys/Values
 # lResult 0=Status, 1=DictResult
