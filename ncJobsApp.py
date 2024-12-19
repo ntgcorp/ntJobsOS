@@ -22,15 +22,13 @@ class NC_Sys:
     sID = ""              # ID Applicazione
     bTest = False         # Test Mode Attivo - Deve esserci inifile
     bLive = False         # Verifica processo in Live
-    bIni = False          # Obbligatorio INI come riga di comando
-    sIniAppFile = ""      # INI File - File di inizializzazine applicazione
+    sIniAppFile = ""      # INI File - File di inizializzazine applicazione, in stessa cartella dell'app
     sIniJobsFile= ""      # INI fILE - File dei jobs
-# App Path
-    sSysPath = ""         # ntJobs Kit Path Root
-    sApp_Path = ""        # Application Path
-    sApp_File = ""        # Applicatioon File Name
+# System
+    sSys_Path = ""        # ntJobs App Path Root
+    sSys_File = ""        # ntJobs File Name
 # Argomenti di lancio applicazione (iniziali file.ini file.csv facoltativo)
-    dictArgs = None       # Argomenti
+    dictArgs = {}         # Argomenti
 # jOBS.INI Path
     sJob_Path = ""        # Job File Path
     sJob_File = ""        # Job File (Normalizzato completo)
@@ -41,6 +39,8 @@ class NC_Sys:
     sTS_End = ""          # TimeStart: End
 # INI Config + Actions in sequenza
     dictConfig = {}       # Config (Sezione Config) - Da file INI.APP+INI.JOBS
+    dictConfigApp={}      # INI.APP
+    dictConfigArgs={}     # INI.ARGS
     dictConfigFields = {} # Tipizzazione particolare (per tutte le sezioni).
     dictJobs = {}         # Jobs/Sections - Config(NON USATO estrattoin dictConfig) + Parametri richiamo Actions in sequenza
     asJobs = []           # Jobs Names List (config....ecc)
@@ -82,99 +82,74 @@ class NC_Sys:
         try:
             locale.setlocale(locale.LC_ALL, "it_IT.UTF8")
             self.sID = sID_set
-            self.sSys_Path = os.getcwd()
-            print("ntJob.Start: " + self.sID + ", TS: " + self.sTS_Start)
-        except:
-            sResult="Errore App Init"
+            print(sProc + ": SetLocale")
+        except Exception as e:
+            sResult=getattr(e, 'SetLocale/GetCwd', repr(e))
+
+# Set App Path
+        if sResult=="":
+            self.sSys_File=nlSys.NF_PathScript("ID.NE")
+            self.sSys_Path=nlSys.NF_PathScript("PATH")
+
+# Legge Argomenti (dictArgs da sommare poi a dictConfig.App)
+        if sResult=="":
+            lResult=nlSys.NF_Args()            
+            if lResult[0]=="":
+                lResult=nlSys.NF_ArgsJobs(lResult[1])
+            if lResult[0]=="":
+                self.dictArgs=lResult[1]
+                nlSys.NF_DebugFase(self.bTest, "Args: " + str(self.dictArgs), sProc)
+            sResult=lResult[0]
 
 # Inizializazione parametri App
-        if (kwargs != None) and (sResult == ""):
-            for key, value in kwargs.keys:
-        # Attiva LOG
+        if (self.dictArgs != None) and (sResult == ""):
+            for key, value in self.dictArgs.keys():
+        # Attiva LOG (sottinteso True)
                 if key=="log":
                     self.sLogFile = self.sSys_Path + "\\Log\\" + self.sID + ".log"
                     sResult=self.Log("Start", type="s", proc="init")
-        # Attiva INI
-                elif key=="ini":
-                    self.bIni=value
-        # Attiva
+        # Attiva Test Mode - Prende File test.ini predisposto -
                 elif key=="test":
-                    self.bTest=nlSys.NF_DictGet(kwargs,"test", False)
-        # Actions
-                elif key=="actions":
-                    self.actions=("MAIL.SEND"),
+                    self.bTest=value
         # Callback
                 elif key=="cb":
                     self.cbactions=value,
         # Live
                 elif key=="live":
                     self.bLive=True
-        # Config Required
-                elif key=="config":
-                    self.dictConfigFields = {"WAIT":"I", "SMTP.SSL":"B", "SMTP.PORT":"I","MASSIVE":"B"}
 
 # Primo Log
         if sResult=="":
             self.Log("Start")
 
-# Legge Argomenti
-        if sResult=="":
-            sResult=self.Args()
-            if sResult=="": nlSys.NF_DebugFase(NT_ENV_TEST_APP, "Args ", sProc)
-
-# File Ini Jobs - Setup
-        if sResult=="":
-            if self.bIni:
-                self.sIniJobs_File=self.TestFile(self.NF_PathNormal(self.sIniJobs_File))
-                sResult=nlSys.NF_FileExistErr(self.sIniJobs_File,"non presente ini jobs")
+# Scompose Job - Get Path & Name
+# DISABILITATI FORSE DA CANCELLARE
+#        if (sResult=="") and (self.sIniJobs_File!=""):
+#            # Normalizzazione e JobPath
+#            # 0=Ritorno, 1=Dir, 2=File, 3=Ext, 4=FileConExt, 5=FileNormalizzato
+#            lResult=nlSys.NF_PathNormal(self.sJob_File)
+#            self.sJob_Path=lResult[1]
+#            self.sJob_File=lResult[5]
+#            self.sJob_Name=lResult[2]
 
 # Scompose App(py) - Get App Path/Name
-            if sResult=="":
-                self.sApp_file=nlSys.NF_PathScript("ID.NE")
-                self.sApp_path=nlSys.NF_PathScript("PATH")
-                self.sIniAppFile=self.TestFile(nlSys.NF_PathMake(self.sApp_Path,self.sApp_Name,NT_ENV_APP_EXT))
-
-# Scompose Job - Get Path & Name
-        if (sResult=="") and (self.sIniJobs_File!=""):
-            # Normalizzazione e JobPath
-            # 0=Ritorno, 1=Dir, 2=File, 3=Ext, 4=FileConExt, 5=FileNormalizzato
-            lResult=nlSys.NF_PathNormal(self.sJob_File)
-            self.sJob_Path=lResult[1]
-            self.sJob_File=lResult[5]
-            self.sJob_Name=lResult[2]
-# Debug
-        if sResult == "":
-            nlSys.NF_DebugFase(self.bTest, f"File INI.APP {self.sFileIni_app}, File INI.JOBS {self.sFileIni_app}, File CSV {self.sFileCsv}", sProc)
-            dictParams={"INI.YES": self.bINI, "TEST.YES": self.bTest, "INI.TEST": self.sIniTest, "ACTIONS": self.asJobs}
-            nlSys.NF_DebugFase(NT_ENV_TEST_APP, "Parametri job: " + nlSys.NF_StrObj(dictParams), sProc)
-
 # Read INI.APP - Legge se c'è, test mode o no
         if sResult=="":
+            self.sIniAppFile=self.TestFile(nlSys.NF_PathMake(self.sSys_Path,self.sApp_Name,NT_ENV_APP_EXT))
             if nlSys.NF_FileExist(self.sIniAppFile):
-                sResult=self.NF_ReadIni("app")
-# dictConfig: Conversioni di Tipi e Verifica che ci siano i parametri "obbligatori"
-        if sResult == "":
-            self.dictConfig = nlSys.NF_DictConvert(self.dictConfig, self.dictConfigFields)
-            nlSys.NF_DebugFase(NT_ENV_TEST_APP, "INI CONFIG. Keys " + nlSys.NF_DictStr(self.dictConfig), sProc)
-
-# Read INI.JOBS
-        if sResult=="":
-            sResult=self.NF_ReadIni("jobs")
-            # Parametri: Lettura INI JOB
-        if sResult=="":
-            # Impostazioni Post caricamento Jobs
-            self.asJobs=self.dictJobs.Keys()
-            nlSys.NF_DebugFase(NT_ENV_TEST_APP, "Jobs letti:" + str(nlSys.NF_DictLen(self.dictJobs)), sProc)
-# dictJobs: Conversioni di Tipi e Verifica che ci siano i parametri "obbligatori"
-            for sKey in self.asJobs:
-                dictJob=nlSys.NF_DictConvert(self.dictJobs[sKey], self.dictConfigFields)
-                self.dictJobs[sKey]=dictJob
+                sResult=self.ReadIni("app")
 
 # Se Live scrive file di live iniziale
         if sResult=="" and self.bLive:
-            self.sTS_Live=nlSys.NF_TS_ToStr()
-            self.sLiveFile=nlSys.NF_PathMake(self.sJob_Path,self.sJobMame,"live")
+            self.sLiveFile=nlSys.NF_PathMake(self.sJob_Path,self.sJob_Name,"live")
             sResult=self.Live()
+
+# Debug
+        if sResult == "":
+            nlSys.NF_DebugFase(self.bTest, f"File INI.APP {self.sIniAppFile}, File INI.JOBS {self.sIniJobsFile}, File CSV {self.sFileCsv}", sProc)
+            dictParams={"INI.YES": self.bINI, "TEST.YES": self.bTest, "INI.TEST": self.sIniTest, "ACTIONS": self.asJobs}
+            nlSys.NF_DebugFase(NT_ENV_TEST_APP, "Parametri job: " + nlSys.NF_StrObj(self.dictConfig), sProc)
+
 
 # Ritorno
         return nlSys.NF_ErrorProc(sResult,sProc)
@@ -240,58 +215,47 @@ class NC_Sys:
         sProc = "JOBS.APP.ReadINI"
         sResult = ""
 
-# Tipo File
+# Lettura INI
+        self.sIniAppFile=self.TestFile(self.sSys_Path, self.sSys_File)
+        lResult=nlDataFiles.NF_INI_Read(sFileIni)
+        sResult=lResult[0]
+        if sResult != "":  return nlSys.NF_ErrorProc(sResult,sProc)
+
+# Caso INI.APP
         if sType=="app":
-            sFileIni=self.sIniAppFile
-        elif sType=="jobs":
-            sFileIni=self.sIniJobs_File
-        else:
-            sResult="Type ini non supportato " + sType
-
-# INI/CSV Obbligatorio check
-        if sResult=="":
-            sResult=nlSys.NF_FileExistErr(self.sIniJobs_File)
-
-# Legge INI
-        if sResult=="":
-            nlSys.NF_DebugFase(NT_ENV_TEST_APP, "Lettura file INI:" + self.sJob_File, sProc)
-            lResult=nlDataFiles.NF_INI_Read(sFileIni)
             sResult=lResult[0]
-
-# Caso 1: App - Imposta config
-        if (sType=="app") and (sResult==""):
-        # Prende sezione CONFIG
-            self.dictConfig=lResult[1]
-        else:
-# Caso 2: Jobs - Aggiunta a config + jobs
+            if sResult=="":
+                self.dictConfigApp = nlSys.NF_DictConvert(lResult[1], self.dictConfigFields)
+    # Merge
+            if sResult=="":
+                self.dictConfig={}
+                self.dictConfig=nlSys.NF_DictMerge(self.dictConfig, self.dictConfigApp)
+                self.dictConfig=nlSys.NF_DictMerge(self.dictConfig, self.dictConfiArgs)
+# Caso INI.JOBS
+        elif sType=="jobs":
+        # Prende dict
+            self.dictJobs=lResult[1]
+        # Impostazioni Post caricamento Jobs
+            self.asJobs=self.dictJobs.Keys()
+            nlSys.NF_DebugFase(NT_ENV_TEST_APP, "Jobs letti:" + str(nlSys.NF_DictLen(self.dictJobs)), sProc)
+        # dictJobs: Conversioni di Tipi e Verifica che ci siano i parametri "obbligatori"
+            for sKey in self.asJobs:
+                dictJob=nlSys.NF_DictConvert(self.dictJobs[sKey], self.dictConfigFields)
+                self.dictJobs[sKey]=dictJob
+        # Caso 2: Jobs - Aggiunta a config + jobs
             self.dictJobs=lResult[1]
             dictConfig=nlSys.NF_DictGet(self.dictJobs, "CONFIG", {})
             if nlSys.NF_DictLen(dictConfig)<1:
                 sResult="sezione CONFIG vuota o non esistente"
             else:
                 nlSys.NF_DictMerge(self.dictConfig,dictConfig)
+# Caso Type non supportato
+        else:
+            sResult="Type non supportato"
+
 # Completamento:
         nlSys.NF_DebugFase(NT_ENV_TEST_APP, "Letto file INI. Eventuali errori: " + sResult, sProc)
 
-# Ritorno
-        return nlSys.NF_ErrorProc(sResult,sProc)
-
-# Arguments
-# Parametri
-# INI.YES: Obbligatorio File INI
-# TEST.YES: Previsti file di test, allora ci deve essere anche TEST.INI
-# Ritorno lResult. 0=sFileINI
-# ------------------------------------------------------------------------------------
-    def Args(self):
-        sProc="JOBS.APP.ARGS"
-        sResult=""
-
-# Argomenti
-        lResult=self.NF_Args()
-        sResult=lResult[0]
-        if sResult=="":
-            dictArgs=lResult[1]
-            self.sIniJobs_File=nlSys.NF_DictGet(dictArgs,1,"")
 # Ritorno
         return nlSys.NF_ErrorProc(sResult,sProc)
 
@@ -400,8 +364,43 @@ class NC_Sys:
         sResult=""
         lResult=[]
 
-    # Setup
+# Setup
+# -------------------------------------------------------------------------------------
         dictReturnS=[]
+
+# CurrentDir = ScriptDir.
+# Dichiarare TIMESTAMP.START e TIMESTART.END
+        self.sJobPath=nlSys.NF_PathScript("PATH")
+        print("ntJobs Start. \nCurrent Dir: " + self.sJobPath + "\nTime.Start: " + sTS_Start)
+        os.chdir(self.sJobPath)
+
+# Prende Argomenti
+        nlSys.NF_DebugFase(bDebug,"Check Argomenti", sProc)
+        lResult=nlSys.NF_Args([])
+        sResult=lResult[0]
+        if (sResult==""):
+            dictArgsTemp=lResult[1]
+
+# Conversione args ntjobs (lettura ini o trasformazione in dict parametri)
+        if (sResult==""):
+            nlSys.NF_DebugFase(bDebug,"Conversione Argomenti", sProc)
+            lResult=NF_ArgsJobs(dictArgsTemp)
+            sResult=lResult[0]
+            if sResult=="":
+                dictArgs=lResult[1]
+
+# Altro check e prende comando
+        if sResult=="":
+            nArgs=nlSys.NF_DictLen(dictArgs)
+            nlSys.NF_DebugFase(bDebug,"Argomenti: " + str(nArgs)  + ", valori: " + str(dictArgs), sProc)
+            if nArgs<1:
+                sResult="naJobs Argomenti: comando, ...Altri parametri"
+            else:
+                self.sAction=dictArgs['ACTION'].upper()
+                self.dictArgs.update({'ACTION':sAction})
+
+# Esecuzione
+# -------------------------------------------------------------------------------------
 
     # Ciclo Azioni
         for sJob in self.asJobs:
