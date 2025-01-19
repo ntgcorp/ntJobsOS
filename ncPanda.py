@@ -3,7 +3,7 @@
 import pandas as pd
 import nlSys
 import openpyxl
-
+import os
 # ----------------------- CLASSI ---------------------------
 # PANDA_XLS Class
 # For Excel Object
@@ -214,6 +214,11 @@ class NC_PANDA_XLS:
 #    sFileout (file_out)
 #    asSheets(sheets)
     def xls_combine(self, **kwargs):
+        sProc="xls_combine"
+        sResult=""
+        asFiles=[]
+        asSheets=[]
+        sFileout=""
 
 # Argomenti opzionali
         for key, value in kwargs.items():
@@ -223,13 +228,18 @@ class NC_PANDA_XLS:
                 bNoOpen=value
             elif key=='NoClose':
                 bNoClose=value
+            elif key=="files_in":
+                asFiles=value
+            elif key=="files_out":
+                sFileout=value
+            elif key=="sheets":
+                asSheets=value                
             else:
                 sResult="Parameter invalid " + key
-
 # Merge
         if sResult=="":
-            sFiles=NF_StrMerge(asFiles)
-            nlSys.NF_DebugFase(True, "merge xls. sFiles: " + sFiles + ", sheets: " + sSheets + ", Result: " + sResult, sProc)
+            sFiles=nlSys.NF_StrMerge(asFiles)
+            nlSys.NF_DebugFase(True, "merge xls. sFiles: " + sFiles + ", sheets: " + str(asSheets) + ", Result: " + sResult, sProc)
 
 
 print("Combine xls and xlsx")

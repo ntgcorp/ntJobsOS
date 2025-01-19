@@ -20,6 +20,10 @@ NT_ENV_DBENG_SQLITE3=False
 NT_ENV_DBENG_ORACLE=False
 NT_ENV_DBENG_GOOBQRY=False
 NT_ENV_DBENG_MARIADB=False
+import sqlite3
+import oracledb
+import bigquery
+
 
 # Tabella DB.Exec
 NT_ENV_DBEXEC_FIELDS=[""]
@@ -28,7 +32,7 @@ NT_ENV_DBEXEC_TABLE=NC_Table(NT_ENV_DBEXEC_FIELDS,"ID")
 # ----------------------- CLASSI ---------------------------
 # PANDA_XLS Class
 # For Excel Object
-class NC_DB(**kwargs):
+class NC_DB(self, **kwargs):
     sType=""
     objDb=None
     bOpen=False
@@ -47,7 +51,7 @@ class NC_DB(**kwargs):
 
 # Alias OpenDb
     def Init(self, **kwargs):
-        return self.OpenDb(**kwargs):
+        return self.OpenDb(**kwargs)
 
 # Apertura DB
     def OpenDb(self, **kwargs):
@@ -113,7 +117,7 @@ class NC_DB(**kwargs):
             else:
                 sResult="DB Type null"
 # Uscita
-       return nlSys.NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 # Chiude Connessione
 # ------------------------------------------------------------------------------
@@ -130,7 +134,7 @@ class NC_DB(**kwargs):
             self.dictTable={}
 
 # Uscita
-       return nlSys.NF_ErrorProc(sResult,sProc)
+        return nlSys.NF_ErrorProc(sResult,sProc)
 
 # Esegue Stringa SQL
 # ------------------------------------------------------------------------------
@@ -175,6 +179,7 @@ class NC_DB(**kwargs):
         sSQL=""
         dictData={}
         nItems=0
+        asLog=[]
 
 # Argomenti opzionali
         for key, value in kwargs.items():
@@ -224,6 +229,8 @@ class NC_DB(**kwargs):
         sResult=""
         sID=""
         sGroup=""
+        asID=[]
+        dictSQL={}
 
 # Argomenti opzionali
         for key, value in kwargs.items():
@@ -244,7 +251,7 @@ class NC_DB(**kwargs):
 
 # Se singolo Id crea lista con solo quello
         if (sResult=="") and (sID != ""):
-            asExec=[sId]
+            asExec=[sID]
 
 # Ricerca Esistenza tutte le ID
         if sResult=="":
