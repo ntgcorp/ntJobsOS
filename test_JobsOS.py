@@ -16,13 +16,12 @@ objNOS=NC_Jobs()
 def test_Jobs_Start():
     sProc="TEST.JOBSOS.START"
     print ("Test Start ntJobsOS")
-    sResult=objNOS.Start()
+    sResult=objNOS.Jobs_Loop()
     nlSys.NF_DebugFase(NT_ENV_TEST_JOBS, "Risultato: " + sResult, sProc)
     return sResult
 
 def test_DataNames():
     sProc="TEST.JOBSOS.DATANAMES"
-    sResult=""
     
     print("Test DataNames")
     print("Test Configs:" + str(objNOS.Configs()))
@@ -31,24 +30,14 @@ def test_DataNames():
     print("Test Cmds:" + str(objNOS.Cmds()))
     print("Test Paths:" + str(objNOS.Paths()))
     
-    return sResult
+    return 
 
 def test_Jobs_Loop():
     sProc="TEST.JOBSOS.LOOP"
-    sResult=""
     
     nlSys.NF_DebugFase(NT_ENV_TEST_JOBS, "Start", sProc)
     sResult=objNOS.Start()
     if sResult=="": sResult=objNOS.Loop()
-    nlSys.NF_DebugFase(NT_ENV_TEST_JOBS, "Risultato: " + sResult, sProc)
-    return sResult
-
-def test_Jobs_INI():
-    sProc="TEST.JOBSOS.INI"
-    sResult=""
-    
-    nlSys.NF_DebugFase(NT_ENV_TEST_JOBS, "Start", sProc)
-    sResult=objNOS.Init_ReadINI()
     nlSys.NF_DebugFase(NT_ENV_TEST_JOBS, "Risultato: " + sResult, sProc)
     return sResult
 
@@ -71,12 +60,6 @@ def test_Jobs_Get():
     sFileOut=objNOS.Jobs_Temp()
     sResult=nlDataFiles.NF_INI_Write(sFileOut,dictTest)
 
-#  Inizializza ntJobs
-    if sResult=="": sResult=objNOS.Start()
-
-# Start + Loop
-    sResult=objNOS.Start()
-
 # End
     test_Write_Quit()
 
@@ -90,17 +73,13 @@ def test_Mail_Init():
     sResult=""
     
     nlSys.NF_DebugFase(NT_ENV_TEST_JOBS, "Start", sProc)
-    sResult=objNOS.Start()
     if sResult=="": sResult=objNOS.Mail_Init()
     nlSys.NF_DebugFase(NT_ENV_TEST_JOBS, "Risultato: " + sResult, sProc)
     return sResult
 
 # Test Creazione jobs.end in cartella ntJobs
 def test_Write_Quit():
-    sProc="TEST.JOBSOS.WRITE.OUT"
-    sResult=""        
-    
-    sResult=objNOS.Start()
+    sProc="TEST.JOBSOS.WRITE.OUT"    
     sFile=nlSys.NF_PathMake(objNOS.jData.sPath,"jobs","end")
     sResult=nlSys.NF_StrWriteFile(sFile, "Quit")
     
@@ -118,35 +97,34 @@ def test_Jobs_Temp():
 # Test Read
 def test_Jobs_Read():
     sProc="TEST.JOBSOS.READ"
-    sResult=""        
-    
-# Ritrorno    
-    sResult=objNOS.Start()
+    sResult=objNOS.Jobs_Read()
+    nlSys.NF_DebugFase(NT_ENV_TEST_JOBS, "Risultato: " + sResult, sProc)
 
 def main():
     
 # Crea Oggetto JOBS
     objNOS=NC_Jobs()
-        
-# Test SOLO INI READ 
-    print("Test ntjobs.INI_Read")
-    test_Jobs_INI()
-    
+    sResult=objNOS.Init()
+            
 # Test SOLO START
-    print("Test njJobs.Start")
-    test_Jobs_Start()
+    if sResult=="":
+        print("Test njJobs.Start")
+        sResult=test_Jobs_Start()
 
 # Test VISIONE DATACONFIG
-    print("Test njJobs.DataNames")
-    test_DataNames()
+    if sResult=="":
+        print("Test njJobs.DataNames")
+        sResult=test_DataNames()
     
 # Test GET
-    print("Test njJobs.Get")
-    test_Jobs_Get()    
+    if sResult=="": 
+        print("Test njJobs.Get")
+        sResult=test_Jobs_Get()    
     
 # Test LOOP
-    print("Test njJobs.Loop")
-    test_Jobs_Loop()
+    if sResult=="":
+        print("Test njJobs.Loop")
+        sResult=test_Jobs_Loop()
 
 # Fine
     print("Fine dei test")

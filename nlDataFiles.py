@@ -77,15 +77,13 @@ class NC_CSV:
                     if (self.Len()==0):
                         nlSys.NF_DebugFase(NT_ENV_TEST, f'Column names {", ".join(self.asHeader)}', sProc)
                         self.asHeader=asRow.copy()
-
                     else:
             # Salva Riga Dati Array
                         print(sProc + ": Legge CSV Riga " + str(self.nLines))
                         self.avTable.append(asRow.copy())
             # Prossima Riga
                     self.nLines+=1
-                    
-        # Chiue file e fine (toglie header)
+        # Chiude file e fine (toglie header)
                 csv_file_in.close()
                 nlSys.NF_DebugFase(NT_ENV_TEST, "Record Letti CSV: " + str(len(self.avTable)), sProc)
 # Fine

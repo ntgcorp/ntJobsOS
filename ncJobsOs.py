@@ -1,5 +1,5 @@
 #
-# CLASSE Orchestratore jobs. Gestisce Users e dati correlati, Actions e dati correlati
+# CLASSE Orchestratore jobs. Gestisce Users e dati correlati
 # Fasi:
 # ----------------------- inizializzazione ----------------------------
 # 1: Init
@@ -19,26 +19,27 @@
 # -----------------------------------------------------------------------------
 
 # Librerie
-import nlSys, os, nlExt
-import nlDataFiles
+import nlSys
+import os
+import signal
+import platform
 import datetime
 from nlDataFiles import NC_CSV
-from ncTable import NC_Table
-from ncJobsApp import NC_Sys
 from ncMail import NC_Mail
 from ncLog import NC_LOG
 
 # Test Mode
-NT_ENV_TEST_JOS=True
-
+NT_ENV_TEST_JOS = True
 # Wait in secondi
-JOBS_WAIT_STD=5
+JOBS_WAIT_STD = 5
 
 # ----------------------------- CLASSI ---------------------------
 class NC_Jobs:
-# ntJobs System Class APP
-# ID dictUsers=
-# Classe Appliczione ntJobs.App - Obbligatoria sua Presenza
+    """
+    ntJobs System Class APP
+    ID dictUsers=
+    Classe Appliczione ntJobs.App - Obbligatoria sua Presenza
+    """
 #    jData=None
 # Oggetto Mail di ritorno
     objMail=None
@@ -76,11 +77,6 @@ class NC_Jobs:
     asFilesJob=[]
 # Paths da Leggere
     dictPaths=dict()
-# Tabelle Dati Jobs
-    asJobsFields={ "USR":("USER_ID","USER_PASSWORD","USER_NAME","USER_NOTES","USER_GROUPS","USER_PATHS","USER_MAIL","USER_ACTIONS"),
-                   "USG":("GROUP_ID","GROUP_NAME","GROUP_NOTES"),
-                   "ACT":("ACT_ID","ACT_NAME","ACT_GROUPS","ACT_SCRIPT","ACT_ENABLED","ACT_PATH","ACT_ORDER","ACT_TIPS","ACT_HELP","ACT_LIVE"),
-                   "CFG":("ADMIN.EMAIL","SMTP.AUTH","SMTP.FROM","SMTP.PASSWORD","SMTP.PORT","SMTP.SERVER","SMTP.SSL","SMTP.TLS","SMTP.USER","NTJOBS.VER")}
 # Jobs
     FLD_LASTCHECK=0
 # Tabelle di supporto per Tabelle BI/MULTIDIMENSIONALI JobOS, Users, Comandi, Gruppi, Paths da cercare, non CFG
@@ -93,7 +89,13 @@ class NC_Jobs:
     JOB_DAT_ACT=1   # Data/ntjobs_actions.csv
     JOB_DAT_USR=2   # Data/ntjobs_users.csv
     JOB_DAT_USG=3   # Data/ntjobs_groups.csv
-    dictFData={JOB_DAT_CFG: "config",JOB_DAT_ACT: "actions",JOB_DAT_USR:"users",JOB_DAT_USG:"groups"}
+# Nomi File esterni
+    dictFData={JOB_DAT_CFG:"config", JOB_DAT_ACT:"actions", JOB_DAT_USR:"users", JOB_DAT_USG:"groups"}
+# Tabelle Dati Jobs
+    asJobsFields={ JOB_DAT_USR:("USER_ID","USER_PASSWORD","USER_NAME","USER_NOTES","USER_GROUPS","USER_PATHS","USER_MAIL","USER_ACTIONS"),
+                   JOB_DAT_USG:("GROUP_ID","GROUP_NAME","GROUP_NOTES"),
+                   JOB_DAT_ACT:("ACT_ID","ACT_NAME","ACT_GROUPS","ACT_SCRIPT","ACT_ENABLED","ACT_PATH","ACT_ORDER","ACT_TIPS","ACT_HELP","ACT_LIVE"),
+                   JOB_DAT_CFG:("ADMIN.EMAIL","SMTP.AUTH","SMTP.FROM","SMTP.PASSWORD","SMTP.PORT","SMTP.SERVER","SMTP.SSL","SMTP.TLS","SMTP.USER","NTJOBS.VER")}
 # Repository in memoria Tabelle Interne CARICATE DA CSV ESTERNO - CREATO SPAZIO IN ARRAY
     TabData=["","","",""]
 # User CURRENT Details - Tutti e quelli più usati - Da Jobs_Login. gli altri in JOBSINI
@@ -103,46 +105,77 @@ class NC_Jobs:
     bExitJOB=False     # Flag di uscita da jobs corrente
     bExitNJOS=False    # Flag di uscita da NTJOBS full
     bMailLogin=True    # Flag Mail Login fatto Flag (deve essere fatto una volta sola)
-    
+# Variabili Iniizializzate
+    sSys_PathRoot=""   # Path BASE 
+
 # Init - Richiede presenza jData già inizializzata
 # ------------------------------------------------------------------------------------------------------------
     def __init__(self):
         pass
 
+# Inizializzazione OGGETTO
     def Init(self):
         sResult=""
         sProc="JOS.INIT"
-
 # Log Start
-        sLogFile=nlSys.NF_PathMake(nlSys.NF_PathScript("PATH"),"system","log")
-        self.objLog=NC_LOG()
-        sResult=self.Sys_Log("Start",log_file=sLogFile,log_cat="info")
-
+        nlSys.NF_DebugFase(NT_ENV_TEST_JOS, "Start Log", sProc)
+        sLogFile=nlSys.NF_PathMake(nlSys.NF_PathScript("PATH"),"system","log")       
+        self.objLog=NC_LOG()        
+        sResult=self.objLog.Log("Start Log", log_type="info",log_file=sLogFile,log_cat="info")
+# Inizializzazioni
+        nlSys.NF_DebugFase(NT_ENV_TEST_JOS, "Start Init", sProc)
+        self.sSysPathRoot=nlSys.NF_PathScript("PATH")
 # Lettura INI
         if sResult=="":
-            sResult=self.Init_ReadINI()
-
+            for nConfig in self.dictFData.keys():
+                nlSys.NF_DebugFase(NT_ENV_TEST_JOS, "Read Config " + self.dictFData[nConfig], sProc)
+                sTemp=self.Sys_ReadINI(nConfig)
+                if sTemp=="":
+                    sResult = sResult + nlSys.iif(sResult != "",",","") + "Read Config Error " + self.dictFData[nConfig] + ": " + sTemp
 # Iniializzazione MAIL ENGINE
         if sResult=="":
-            sResult=self.Mail_Init()
-
+            nlSys.NF_DebugFase(NT_ENV_TEST_JOS, "Send Mail", sProc)
+            sResult=self.Init_Mail()
 # Uscita
         return nlSys.NF_ErrorProc(sResult, sProc)
 
 # Legge DATI di partenza, config.ini, users.csv, actions.csv
 # Rirorna sResult / self.sResult
+# inutile forse c'è già Sys_ReadINI
 # --------------------------------------------------------------------
     def Init_ReadINI(self):
         sProc="JOS.INIT.READINI"
         sResult=""
-
-# Lettura DATI INI o CSV
+        anIni=self.dictFData.keys()
         objCSV=NC_CSV()
-        asIni=self.dictFData.keys()
-        for sIni in asIni:
-        # NomeFile e Normalizzazione
-            sResult=nlSys.NF_StrAppendExt(sResult,nlSys.ReadINI(sIni))
-
+        sFileConfigName=""
+        dictParams={}
+        dictIniTemp={}
+# Lettura DATI INI o CSV
+#  Legge Parametri
+#self.bTrim=nlSys.NF_DictGet(dictParams,"TRIM",False)
+#self.sDelimiter=nlSys.NF_DictGet(dictParams,"DELIMITER",sCSV_DELIMITER)
+#self.asFields=nlSys.NF_DictGet(dictParams,"FIELDS",[])
+#self.sFileCSV=nlSys.NF_DictGet(dictParams,"FILE.IN","")
+#self.sFieldKey=nlSys.NF_DictGet(dictParams,"FIELD.KEY","")
+        for nIni in anIni:
+        # Comportamento Diverso a seconda tipo. CSV princpale o INI
+        # Lettura CSV e associazione Tabella letta a quella di riferimento 
+        # usr/groups/actions
+            if self.Sys_ConfigFileType(nIni)=="csv":
+        # NomeFile Config e Normalizzazione
+                sFileConfigName=self.Sys_ConfigFileName(nIni)
+        # Preparazione chiamata CSV READ
+                dictParams["FILE.IN"]=sFileConfigName
+                asFields=self.asJobsFields[nIni]
+                dictParams["FIELDS"]=asFields
+                dictParams["FIELD.KEY"]=asFields[0]
+                sResult,dictCSV=nlSys.NF_Return2(objCSV.Read(sFileConfigName,dictParams))
+                if sResult=="":
+                    self.TabData[nIni]=dictCSV.copy()
+            else:
+                sResult,dictIniTemp=nlSys.NF_Return2(nlSys.NF_INI_Read(sFileConfigName))
+                if sResult=="": self.dictConfigINI=dictIniTemp.copy()
 # Aggiorna Tabelle Interne
         if sResult=="":
             self.asUsers=self.Sys_Users()
@@ -157,7 +190,6 @@ class NC_Jobs:
     def Init_Mail(self):
         sProc="JOS.INIT.MAIL"
         sResult=""
-        dict
         dictMail=[]
 
     # Esci se già inizializzato
@@ -212,7 +244,56 @@ class NC_Jobs:
         asResult=self.dictINI.keys().copy()
         asResult=nlSys.NF_ArrayAppend(self.dictJobs.keys())
         return asResult
+
+    def Sys_ConfigFileName(self, nConfig):
+        sResult=self.dictFData[nConfig]
+        sPath=self.sSys_PathRoot & "/DatiTest"
+        sResult=nlSys.NF_PathMake(sPath, sResult, self.Sys_ConfigFileType(nConfig))
+        
+    def Sys_ConfigFileType(self, nConfig):
+        return nlSys.iif(nConfig==self.JOB_DAT_CFG,"ini","cfg")
+
+# Get KEY from GLOBAL CONFIG *config.ini"
+# sType(""=Globale, "j"=singolo file ini)
+# -----------------------------------------------------------------------------
+    def Sys_Config(self, sKey, **kwargs):
+        sResult=""
+        sProc="JOBS.SYS.CONFIG"
+# Opzione Tipo di config
+        sType=nlSys.NF_DictGet(kwargs,"type","")
+# Estrae Config j=globale, ""=IniCorrente        
+        if sType=="":
+            vResult=nlSys.NF_DictGet(self.dictINI,sKey,"")
+        elif sType=="j":
+            vResult=nlSys.NF_DictGet(self.dictConfig,sKey,"")
+        else:
+            vResult=""
+# Uscita
+        return nlSys.NF_ErrorProc(sResult, sProc), vResult
+
+# Reset Config da master+jobs. Ritorna vuoto per eventuali usi futuri
+    def Sys_ConfigReset(self):
+        sProc="JOS.SYS.CONFIG.RESET"
+        sResult=""
+        if nlSys.NF_DictExistKey(self.dictJobs,"CONFIG"):
+            dictConfigJob=self.dictJobs["CONFIG"]
+        self.dictConfig=nlSys.NF_DictMerge(self.dictINI,self.dictConfigJob)
+        return sResult
+
+# Replace config vars in string
+# -----------------------------------------------------------------------------
+    def Sys_ConfigReplace(self, sText): 
+        sResult=nlSys.NF_StrReplaceDict(sText, self.dictConfig)
+        return sResult
+
+# Get KEY of GLOBAL CONFIG *config.ini"
+# -----------------------------------------------------------------------------
+    def Sys_ConfigSet(self, sKey, vValue, **kwargs):
+        sType=nlSys.NF_DictGet(kwargs,type,"")
+        return nlSys.NF_DictReplace(self.dictConfig,sKey,vValue)
     
+
+
 # Creazione path da esplorare
 # Dato Array di Paths divisi da ",", vengono splittati ed aggiunti ad Array finale, togliendo gli spazi
 # Per gestire il ritorno di errori legati al path viene creato un dict ed associato lo user
@@ -234,49 +315,53 @@ class NC_Jobs:
         # Per Ogni Path attribuisce user come valore
             for sPath in asPaths:
                 self.dictPaths[sPath]=sUser
-
-# Log JobsOS
-    def Sys_Log(self,**kwargs):
-        return self.objLog.Log(kwargs)
-
 # Legge gli INI di configuazione con chiave numerica di tabella FDATA
     def Sys_ReadINI(self,nKey):
         sProc="JOS.SYS.READINI"
         sResult=""
+        objCSV=NC_CSV()
 # File da leggere e verifica sua esistenza
-        sIni=""
-        sIni=sIni.lower() + nlSys.iif(nKey==self.JOB_DAT_CFG,"ini",".csv")
-        sFile="Data/ntjobs_" + self.Sys_ReadINI(sIni)
-        lResult=nlSys.NF_PathNormal(sFile)
-        sResult=lResult[0]
+        sFile=""
+# Verifica
+        anConfig=self.dictFData.keys()
+        if not nKey in anConfig:
+            sResult="Key out of range: " + str(nKey)
+# Crea Nome file da leggere con estensiione e path
         if sResult=="":
-            sFile=lResult[1]
+            sFile=self.dictFData[nKey] + "." + nlSys.iif(nKey==self.JOB_DAT_CFG,"ini","csv")
+            sFile=nlSys.iif(NT_ENV_TEST_JOS,"DatiTest","Data") + "\\Config\\ntjobs_" + sFile 
+            sFile=self.sSysPathRoot + sFile
+# Verifica se esiste
             sResult=nlSys.NF_FileExistErr(sFile)
 # Lettura INI o CSV =dict Interno
         if sResult=="":
-            nlSys.NF_DebugFase(NT_ENV_TEST_JOS, "Legge config " + sFile, sProc)
             if nKey==self.JOB_DAT_CFG:
-                lResult=nlDataFiles.NF_INI_Read(sFile)
+                nlSys.NF_DebugFase(NT_ENV_TEST_JOS, "Config.INI Read.Start " + sFile, sProc)
+                lResult=nlSys.NF_INI_Read(sFile)
                 sResult=lResult[0]
-# Prende tabella config
-# Aggiunge Config Extra
+        # Prende tabella config
+        # Aggiunge Config Extra
                 if sResult=="":
                     self.dictConfig=lResult[1].copy()
-                    dictAdd=self.ConfigPaths()
-                    self.TabData[nKey]=nlSys.NF_DictMerge(self.dictConfig,dictAdd)
+                    dictAdd=self.dictConfigINI.copy()
+                    nlSys.NF_DictMerge(self.dictConfig,dictAdd)
+                    self.TabData[nKey]=self.dictConfig.copy()
+                    nlSys.NF_DebugFase(NT_ENV_TEST_JOS, "Config.INI Read.End " + str(self.dictConfig), sProc)
 # Le altre sono dei CSV
             else:
-                asFields=self.dictFDATA[nKey]
+                nlSys.NF_DebugFase(NT_ENV_TEST_JOS, "Config.CSV Read.Start " + sFile, sProc)
+                asFields=self.asJobsFields[nKey]
                 dictParams={
                     "TRIM": True,
                     "FIELDS": asFields,
                     "FILE.IN": sFile,
                     "FIELD.KEY": asFields[0]}
-                sResult=self.objCSV.NF_CSV_Read(sFile)
+                sResult=objCSV.Read(dictParams)
                 # Prende tabella dati caricata
                 if sResult=="":
-                    avTable=self.objCSV.avTable.copy()
-                    self.TabData[nKey]
+                   self.TabData[nKey]=objCSV.avTable.copy()
+                   nRows=nlSys.NF_ArrayLen(objCSV.avTable)
+                   nlSys.NF_DebugFase(NT_ENV_TEST_JOS, "Config.CSV Read.End " + sFile + ", Rows: " + str(nRows), sProc)
         # Uscita
         return nlSys.NF_ErrorProc(sResult, sProc)
 
@@ -327,7 +412,7 @@ class NC_Jobs:
 
     # Legge INI
     # Ritorna lResult 0=Ritorno, 1=IniDict, dove Trim/UCASE.KEY e valori "trimmati"
-        lResult=nlDataFiles.NF_INI_Read(sFileJob)
+        lResult=nlSys.NF_INI_Read(sFileJob)
         sResult=lResult[0]
         asFilesJob=[]
 
@@ -482,7 +567,8 @@ class NC_Jobs:
         sProc="JOS.EXEC.RUN"
         sResult=""
 
-#DA COMPLETARE
+# Esecuzione
+        sResult=nlSys.NF_Exec(self.sScript)
 
     # Uscita
         return nlSys.NF_ErrorProc(sResult,sProc)
@@ -534,8 +620,7 @@ class NC_Jobs:
         sPathTemp=self.Sys_Config("INBOX")
         if sResult=="":
             sFileName=nlSys.NF_PathMake(sPathTemp,"jobs","ini")
-            sResult=nlDataFiles.NF_INI_Write(sFileName,self.dicINI)
-
+            sResult=nlSys.NF_INI_Write(sFileName,self.dicINI)
     # Uscita
         return nlSys.NF_ErrorProc(sResult, sProc)
 
@@ -580,43 +665,7 @@ class NC_Jobs:
 # Ritorno
         sResult=nlSys.NF_ErrorProc(sResult, sProc)
         return sResult,vDato
-
-# Get KEY from GLOBAL CONFIG *config.ini"
-# sType(""=Globale, "j"=singolo file ini)
-# -----------------------------------------------------------------------------
-    def Sys_Config(self, sKey, **kwargs):
-        sResult=""
-        sProc="JOBS.SYS.CONFIG"
-        
-# Opzione Tipo di config
-        sType=nlSys.NF_DictGet(kwargs,"type","")
-        
-# Estrae Config j=globale, ""=IniCorrente        
-        if sType=="":
-            vResult=nlSys.NF_DictGet(self.dictINI,sKey,"")
-        elif sType=="j":
-            vResult=nlSys.NF_DictGet(self.dictConfig,sKey,"")
-        else:
-            vResult=""
-
-# Uscita
-        return nlSys.NF_ErrorProc(sResult, sProc), vResult
-
-# Reset Config da master+jobs. Ritorna vuoto per eventuali usi futuri
-    def Sys_ConfigReset(self):
-        sProc="JOS.SYS.CONFIG.RESET"
-        sResult=""
-        if nlSys.NF_DictExistKey(self.dictJobs,"CONFIG"):
-            dictConfigJob=self.dictJobs["CONFIG"]
-        self.dictConfig=nlSys.NF_DictMerge(self.dictINI,self.dictConfigJob)
-        return sResult
-
-# Get KEY of GLOBAL CONFIG *config.ini"
-# -----------------------------------------------------------------------------
-    def Sys_ConfigSet(self, sKey, vValue, **kwargs):
-        sType=nlSys.NF_DictGet(kwargs,type,"")
-        return nlSys.NF_DictReplace(self.dictConfig,sKey,vValue)
-
+    
 # Archive
 # Cerca tutti i JOBS da Archiviare e li sposta in zona Archivio
 # --------------------------------------------------------------
@@ -667,11 +716,11 @@ class NC_Jobs:
 
 # AZIONE: Ciclo Get -> Exec -> Return -> Archive
 # -----------------------------------------------------
-    def Jobs_Loop(self, dictParams):
+    def Jobs_Loop(self):
         sProc="JOS.LOOP"
         sResult=""
 # Log
-        sResult=self.Sys_Log("NJOS Start: " +  sResult, cat="NJOS")
+        sResult=self.objLog.Log("NJOS Start: " +  sResult, cat="NJOS")
 
 # Inizio Loop
         while self.bExit==False:
@@ -732,7 +781,7 @@ class NC_Jobs:
         sProc="JOS.QUIT"
         sResult=""
 # Log
-        sResult=self.objLog.Sys_Log("NJOS Quit Job.ini Forced: " + self.sJob, cat="NJOS")
+        sResult=self.objLog.Log("NJOS Quit Job.ini Forced: " + self.sJob, cat="NJOS")
 
 # Scrive File Quit
         sFileJobQuit=nlSys.NF_PathMake(self.jData.sJob,"jobs","end")
@@ -846,7 +895,7 @@ class NC_Jobs:
                 if sResult=="":
                     sResult=self.Jobs_End(sJob)
                 if sResult=="":
-                    sResult=self.Sys_Log("Kill for not live check  " + str(nSeconds) + ": " + sJob)
+                    sResult=self.objLog.Log("Kill for not live check  " + str(nSeconds) + ": " + sJob)
         # Salva ultimo Check
             self.dictJobsLive[sJob][self.FLD_LASTCHECK]=vNow
 # Uscita

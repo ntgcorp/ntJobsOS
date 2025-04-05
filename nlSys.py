@@ -15,7 +15,7 @@ import subprocess
 import signal
 import platform
 # Per Ambiente
-from sys import platform
+from sys import platform as sys_platform
 # Lib per gestione Replace
 from string import Template
 # Per Wait e Date
@@ -47,6 +47,8 @@ def NF_Args(axArgs=[]):
 
 # Facolativi
     NF_DebugFase(True,"Parametri per parsing Argomnenti:"  + str(axArgs), sProc)
+    parser = argparse.ArgumentParser()
+    parser.parse_args() 
     for xArg in axArgs:
         print("Argument " + xArg[0] + ": " + len(xArg))
         if len(xArg)==3:
@@ -88,7 +90,7 @@ def iif (bExpr, trueResult, falseResult):
 def NF_Kill(**kwargs):
     sProc="NF_Kill"
     sResult=""
-    pid=0
+    PID=0
 
 # Parameters
 # Iterating over the Python kwargs dictionary
@@ -100,12 +102,12 @@ def NF_Kill(**kwargs):
 
 # Try Kill
     try:
-        if platform.system() != 'Windows':
-            os.killpg(PID, signal.SIGKILL)
+        if sys_platform != 'win32':
+            os.kill(PID, signal.SIGKILL)
         else:
             os.kill(PID, signal.SIGTERM)
     except Exception as e:
-        sResult=getattr(e, 'message', repr(e)) + "kill process " + pid
+        sResult=getattr(e, 'message', repr(e)) + "kill process " + str(PID)
 
 # Ritorno
     return NF_ErrorProc(sResult, sProc)
@@ -122,7 +124,7 @@ def NF_Exec(**kwargs):
     sExec_cmd=""
     sExec_action=""
     vExec_pid=None
-    sExec_Args=""
+    sExec_args=""
 
 # Iterating over the Python kwargs dictionary
     for key, value in kwargs.items():
@@ -143,7 +145,7 @@ def NF_Exec(**kwargs):
     if sResult=="":
         if sExec_action=="":
             try:
-                vExec_pid=subprocess.call(sExec_cmd,sExec_args,capture_output=True)
+                vExec_pid=subprocess.call(sExec_cmd + " " + str(sExec_args))
                 if vExec_pid<0: sResult="Errore in esecuzione: " + str(vExec_pid)
             except OSError as e:
                 sResult="Errore Esecuzione " + str(e)
@@ -191,6 +193,8 @@ def NF_FileCopy(sSource, sDest, **kwargs):
     bPathDest=False
     bMove=False
     sFileDest=""
+    sPath=sFile=sExt=""
+    bOld=False
 
 # Parametri e Verifica
     dictVerify={"bool": ("replace","pathdest","oldtake")}
@@ -222,7 +226,7 @@ def NF_FileCopy(sSource, sDest, **kwargs):
     if sResult=="":
         if NF_FileExist(sDest):
             if bOld:
-                sFileOld=NF_PathMake(sDest,sFile + "_old",sExt)
+                sFileOld=NF_PathMake(sDest, str(sFile) + "_old", sExt)
                 sResult=NF_FileRename(sFileDest,sFileOld)
             else:
                 sResult=NF_FileDelete(sFileDest)
@@ -897,7 +901,7 @@ def NF_TS_ToStr(sType="L", **kwargs):
     if sType=="": sType="L"
 
 # Parametri opzionali
-    for key,value in kwargs:
+    for key,value in kwargs.items():
         if key=="from_dict":
             sResult,vDateTime=NF_TS_FromDict(value,"D")
         elif key=="old":
@@ -1159,7 +1163,8 @@ def NF_StrJoin(**kwargs):
 
 # Ciclo Standard
     if bFast:
-        sResult=sDelim.join(avResult)
+        if len(avResult)==0: avResult=[""]
+        sResult = sDelim.join(str(x) for x in avResult)
     else:
         for vResult in avResult:
             vResult=str(vResult)
@@ -1517,13 +1522,13 @@ def	NF_ArraySort(avArray, sMode="A"):
     return NF_Result(sResult,sProc,avResult)
 
 def NF_IsWindows():
-    if  platform=="win32":
+    if  sys_platform=="win32":
         return True
     else:
         return False
 
 def NF_IsLinux():
-    if  platform=="linux":
+    if  sys_platform=="linux":
         return True
     else:
         return False
@@ -1727,6 +1732,7 @@ def NF_DictFromArr(asHeader, avData):
     return lResult
 
 # Get Param
+# Return: sResult, vValue (doppio)
 # ---------------------------------------------------------------------
 def NF_DictGetParam(dictParam, sKey, sError="", sType=None):
     sProc="DICT.GET.PARAM"

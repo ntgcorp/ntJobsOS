@@ -58,7 +58,7 @@ class NC_LOG:
 
     # Calcoli parametri automaticamente
         #if self.sLogTS=="": self.sLogTS=nlSys.NF_TS_ToStr("X",sOld)
-        self.sLogTS=nlSys.NF_TS_ToStr("X",sOld)
+        self.sLogTS=nlSys.NF_TS_ToStr("X",old=sOld)
         if self.sLogType=="": self.sLogType="info"
         if self.sLogUser=="": self.sLogUser="nouser"
         if self.sLogName=="": self.sLogName="ntjobs"

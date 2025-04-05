@@ -13,9 +13,6 @@ import argparse
 import os, sys, locale
 import ncParams
 
-# Test mode
-NT_ENV_TEST = True
-
 # ----------------------- CLASSI ---------------------------
 
 # ---------- NC_SYS - jData - ntJobs.App -------------------
@@ -23,7 +20,7 @@ class NC_Sys:
 # Arguments and Setup
     sID = ""              # ID Applicazione
     bTest = False         # Test Mode Attivo - Deve esserci inifile
-    bBreak=False          # Uscita per errore di un job (flag ebreak=true)
+    bBreak= False         # Uscita per errore di un job (flag ebreak=true)
     nLive = 0             # Verifica processo in Live dopo N.Secondi
     sIniAppFile = ""      # INI File - File di inizializzazine applicazione, in stessa cartella dell'app. Contiene solo la [CONFIG]    
 # System
@@ -81,12 +78,12 @@ class NC_Sys:
     def Init(self, sID_set, args,**kwargs):
         sProc="JOBS.APP.INIT"
         sResult=""        
-        
+
+# Forzatura
+        self.bTest=True
 # Argomenti
         self.asArgs=args.copy()
-        print ("App.LenArgs" + str(len(self.asArgs)))        
-# Forzatura
-        if NT_ENV_TEST: self.bTest=True        
+        nlSys.NF_DebugFase(self.bTest, "App.LenArgs" + str(len(self.asArgs)),sProc)           
 # Configurazione App da Paraemtri di inizializzazione
         if sResult=="":
             nlSys.NF_DebugFase(self.bTest, "Parametri di Setup App", sProc)
@@ -94,14 +91,15 @@ class NC_Sys:
             aValues=kwargs.values()
             for key in asKeys:
                 value=kwargs[key]
+                nlSys.NF_DebugFase(self.bTest, "Param Key: " + str(key) + ", R:" + sResult, sProc)
         # Attiva LOG (sottinteso True)
                 if key=="log":
                     if value==True:
                     # Da sistemare dopo
                         self.sLogFile = "*"
         # Attiva Test Mode - Prende File test.ini predisposto -
-                elif key=="test":
-                    self.bTest=value
+#                elif key=="test":
+#                    self.bTest=value
         # Break on Error
                 elif key=="ebreak":
                     self.bBreak=value
@@ -117,6 +115,7 @@ class NC_Sys:
                     self.nLive=value
 # TimeStart di Partenza 
         self.sTS_Start=nlSys.NF_TS_ToStr2()             
+        nlSys.NF_DebugFase(self.bTest, "Start: TimeStamp. R: " + sResult, sProc) 
 # Init jData
         if sResult=="":
             nlSys.NF_DebugFase(self.bTest, "Start: Init App / Set Locale", sProc)
@@ -264,10 +263,14 @@ class NC_Sys:
                 i += 1
                 
 # Imposta dizionario JOB di ritorno
-        if sResult=="":
-            self.dictJobs["CONFIG"]=""
+        if sResult=="":            
+            self.dictJobs["CONFIG"]={"NTJ":"2.0"}
             self.dictJobs["ACTION"]=dictJob.copy()
             self.sJob_File="MEMORY"
+# Cartella JOB=Cartella NTJOBS            
+            self.sJob_Path=self.sSys_Path
+# Debug
+            nlSys.NF_DebugFase(self.bTest,str(self.dictJobs),sProc)
 # Ritorno
         return nlSys.NF_ErrorProc(sResult,sProc)
 
@@ -364,7 +367,7 @@ class NC_Sys:
 # Caso INI.JOBS.ACTIONS: Sezioni dei Jobs
         # Impostazioni Post caricamento Jobs
                 self.asJobs=self.dictJobs.keys()
-                nlSys.NF_DebugFase(NT_ENV_TEST, "Jobs letti:" + str(nlSys.NF_DictLen(self.dictJobs)) + "," + str(self.asJobs), sProc)
+                nlSys.NF_DebugFase(self.bTest, "Jobs letti:" + str(nlSys.NF_DictLen(self.dictJobs)) + "," + str(self.asJobs), sProc)
         # dictJobs.Riempie: Conversioni di Tipi e Verifica che ci siano i parametri "obbligatori"
                 #for sKey in self.asJobs:
                     #dictJob=nlSys.NF_DictConvert(self.dictJobs[sKey], self.dictConfigFields)
@@ -379,7 +382,7 @@ class NC_Sys:
         else:
             sResult="Type INI non supportato"
 # Completamento:
-        nlSys.NF_DebugFase(NT_ENV_TEST, "Letto file INI. Eventuali errori: " + sResult, sProc)
+        nlSys.NF_DebugFase(self.bTest, "Letto file INI. Eventuali errori: " + sResult, sProc)
 
 # Ritorno
         return nlSys.NF_ErrorProc(sResult,sProc)
@@ -401,8 +404,8 @@ class NC_Sys:
 
 # Calcola File End
         sFileEnd=nlSys.NF_PathMake(self.sJob_Path, "jobs", "end")
-        nlSys.NF_DebugFase(NT_ENV_TEST, "File.End: " + sFileEnd, sProc)
-        nlSys.NF_DebugFase(NT_ENV_TEST, "Returns: " + str(self.dictReturnS), sProc)
+        nlSys.NF_DebugFase(self.bTest, "File.End: " + sFileEnd, sProc)
+        nlSys.NF_DebugFase(self.bTest, "Returns: " + str(self.dictReturnS), sProc)
 
 # Scrive File END di ritorno
         sResult=nlSys.NF_INI_Write(sFileEnd, self.dictReturnS)
@@ -443,7 +446,7 @@ class NC_Sys:
 # Conclusione JOB.SECTION
         self.sTS_End=nlSys.NF_TS_ToStr2()
         sTemp=f"JOB.SECTION.END: {self.sJob}, TS: {self.sTS_End}, Section: {sJob}, Files: {sReturnFiles}, Vars: {sReturnVars}"
-        nlSys.NF_DebugFase(NT_ENV_TEST, sTemp, sProc)                                        
+        nlSys.NF_DebugFase(self.bTest, sTemp, sProc)                                        
 # Crea dictReturn
         self.dictReturn={
             "TS.START": self.sTS_Start,
@@ -532,13 +535,18 @@ class NC_Sys:
             self.sResult=""
             self.sResultNotes=""                        
             self.sTS=nlSys.NF_TS_ToStr2()
+        
         # Job/Azione Corrente
             self.dictJob=self.dictJobs[sJob]
+            if nlSys.NF_IsDict(self.dictJob)==False: 
+                nlSys.NF_DebugFase(self.bTest, "Job.NoDict:" + sJob, sProc)    
             self.sJob=sJob
+            
         # Log
             sTemp="Job.Start: " + self.sJob + ", TS: " + self.sTS
             nlSys.NF_DebugFase(self.bTest, sTemp, sProc)
             sResult=self.Log(sTemp,type="l")
+            
         # Call Back il primo deve essere config
             if (sResult=="") and (sJob=="CONFIG"):
                 self.sJob_Version=nlSys.NF_DictGet(self.dictJob,"NTJ","2.0")
@@ -551,9 +559,15 @@ class NC_Sys:
         # 2: Memorizzazione ritorni per ritorno locale e jData 0=Result, 1=Files, 2=Vars, 3: Note di ritorno non errore
                 self.lResult=lResult
                 self.sResult=lResult[0]
-                if len(lResult) > 1: self.dictReturnFiles=lResult[1]
-                if len(lResult) > 2: self.dictReturnVars=lResult[2]
-                if len(lResult) > 3: self.sResultNotes=""
+                if len(lResult) > 1: 
+                    self.dictReturnFiles=lResult[1]
+                    if nlSys.NF_IsDict(self.dictReturnFiles)==False: 
+                        nlSys.NF_DebugFase(self.bTest, "ReturnFiles.NoDict:" + sJob, sProc)    
+                if len(lResult) > 2: 
+                    self.dictReturnVars=lResult[2]
+                    if nlSys.NF_IsDict(self.dictReturnFiles)==False: 
+                        nlSys.NF_DebugFase(self.bTest, "ReturnVars.NoDict:" + sJob, sProc)                        
+                if len(lResult) > 3: self.sResultNotes=""                    
         # 3: Aggiunge Ritorno
                 self.ReturnCalcAdd(lResult)
         # Debug
@@ -572,14 +586,14 @@ class NC_Sys:
 # -------------------------------------------------------------------------------------
 
 # END Job.Complessivo
-        nlSys.NF_DebugFase(NT_ENV_TEST, "End " + sResult, sProc)
+        nlSys.NF_DebugFase(self.bTest, "End " + sResult, sProc)
         self.End()
             
 # Scrive Return
         sTemp="Jobs.Return: " + str(self.dictReturn)
         nlSys.NF_DebugFase(self.bTest, sTemp, sProc)        
         sResult=self.ReturnWrite()
-        nlSys.NF_DebugFase(NT_ENV_TEST, "Risultato scrittura ritorno" + sResult, sProc)
+        nlSys.NF_DebugFase(self.bTest, "Risultato scrittura ritorno" + sResult, sProc)
             
 # Directory di partenza
         os.chdir(self.sSys_Path)
@@ -643,6 +657,9 @@ class NC_Sys:
     
 # Prende JobCorrente dalla Tabella Job Caricati
     def Jobget(self,sJob):
+#    Prende JobCorrente dalla Tabella Job Caricati
+#    @param sJob: Nome Job da prendere
+#    @return: Ritorna lResult 0=Ritorno, 1=DictJob
         sProc="JOB.GET"
         sResult=""
 # Verifica ed Assegna
@@ -656,6 +673,9 @@ class NC_Sys:
         
 # Prende da dizionario parametri l'azione corrente
     def JobActionConfigGet(self, sAction):
+#    Prende da dizionario parametri l'azione corrente
+#    @param sAction: Nome azione da prendere
+#    @return: Ritorna lResult 0=Ritorno, 1=DictParam
         sProc="JOB.ACTION.CFG.GET"
         sResult=""
         dictParam={}
@@ -698,6 +718,16 @@ class NC_Sys:
 # Genera dictionary da array con chiavi pari e valori dispari
 # ----------------------------------------------------------------------------------------------------
     def ArgsToDict(self, aInput):
+        """
+        Converte un array in un dizionario saltando i primi 2 elementi.
+        Esempio:
+            ["a", "b", "c", "d", "e", "f"]
+            diventa
+            {"c": "d", "e": "f"}
+
+        :param aInput: array da convertire
+        :return: tuple (stringa di errore, dizionario)
+        """
         sProc="APP.ARGSTODICT"
         sResult=""
         dictResult = {}
