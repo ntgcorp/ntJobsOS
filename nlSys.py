@@ -14,6 +14,8 @@ import glob
 import subprocess
 import signal
 import platform
+# Lib per CheckEmail ed Altri Check
+import re
 # Per Ambiente
 from sys import platform as sys_platform
 # Lib per gestione Replace
@@ -186,7 +188,7 @@ def NF_Wait(nSecondi):
 # - bMove(move). Spostamento
 
 # DA VERIFICARE
-def NF_FileCopy(sSource, sDest, **kwargs):
+def NF_FileCopy(sSource: str, sDest: str, **kwargs):
     sProc="File.Copy"
     sResult=""
     bReplace=False
@@ -247,7 +249,7 @@ def NF_FileCopy(sSource, sDest, **kwargs):
     return NF_ErrorProc(sResult,sProc)
 
 # Move: - copy wrapped
-def NF_FileMove(sSource,sDest):
+def NF_FileMove(sSource: str,sDest: str):
     sResult=""
     sProc="File.Move"
 
@@ -269,7 +271,7 @@ def NF_FileExist(sFilename):
 # Ritorna doppio risultato.
 # - sResult. "" o Errore
 # - sFilename originale o rimappato con currentdirscript se esiste
-def NF_FileExistMap(sFilename):
+def NF_FileExistMap(sFilename: str):
     sProc="File.Exist.Map"
     sResult=""
 
@@ -287,7 +289,7 @@ def NF_FileExistMap(sFilename):
 
 # String o Binary to File o viceversa
 # sResult=Tipo di errore
-def NF_FileWrite(sFilename, sText, sAttr):
+def NF_FileWrite(sFilename: str, sText:str, sAttr: str):
     sResult=""
     sProc="File.Write"
     bOpen=False
@@ -317,7 +319,7 @@ def NF_FileWrite(sFilename, sText, sAttr):
 # String o Binary to File o viceversa
 # sResult=Tipo di errore
 # Ritorna lResult. 0=sResult, 1=Text
-def NF_FileRead(sText, sFilename, sAttr):
+def NF_FileRead(sText: str, sFilename: str, sAttr: str):
     sResult=""
     sProc="File.Read"
     bOpen=False
@@ -347,7 +349,7 @@ def NF_FileRead(sText, sFilename, sAttr):
 
 # Path.Rename
 # F=File(Default), D=Directory, T=Directory e Contenuto
-def	NF_FileDelete(sFile,sType="F"):
+def	NF_FileDelete(sFile: str, sType="F"):
     sProc="NF_FileDelete"
     sResult=""
 
@@ -367,10 +369,46 @@ def	NF_FileDelete(sFile,sType="F"):
 # Uscita
     return NF_ErrorProc(sResult,sProc)
 
+def NF_FileWriteLine(file_handle, variable, sMode="l"):
+    """
+    Writes a variable to an already opened file with different modes.
+    Returns empty string on success, error message on failure.
+    
+    Args:
+        file_handle: An already opened file handle
+        variable: The variable to write (any type)
+        sMode: Write mode:
+            "b" - binary mode (variable must be bytes)
+            "s" - string mode (no newline added)
+            "l" - string mode with newline added (default)
+    
+    Returns:
+        str: Empty string if successful, error message if failed
+    """
+    try:
+        if sMode == "b":
+            if not isinstance(variable, bytes):
+                return "Error: For binary mode, variable must be bytes"
+            file_handle.write(variable)
+        elif sMode in ("s", "l"):
+            str_value = str(variable)
+            if sMode == "l":
+                str_value += "\n"
+            file_handle.write(str_value)
+        else:
+            return f"Error: Invalid mode '{sMode}'. Use 'b', 's', or 'l'"
+        
+        return ""  # Empty string indicates success
+        
+    except (IOError, OSError) as e:
+        return f"Error: File write failed - {str(e)}"
+    except Exception as e:
+        return f"Error: Unexpected error - {str(e)}"
+    
 # Open File
 # Attr: w=Write, a=Append, r=readonly, x=Create if not exist
 # Return lResult. 0=sResult, 1=Handle/None
-def NF_FileOpen(sFilename,sAttr,**kwargs):
+def NF_FileOpen(sFilename: str,sAttr: str,**kwargs):
     sResult=""
     sProc="File.Open"
 
@@ -394,10 +432,9 @@ def NF_FileOpen(sFilename,sAttr,**kwargs):
     return lResult
 
 # Path.Rename
-def	NF_FileRename(sPathIn, sPathOut):
+def	NF_FileRename(sPathIn: str, sPathOut: str):
     sProc="NF_FileRename"
     sResult=""
-
 # Rename
     try:
         os.rename(sPathIn, sPathOut)
@@ -413,7 +450,7 @@ def	NF_FileRename(sPathIn, sPathOut):
 # 0=sResult
 # 1=Dizionario di Dizionari, dove Key=Sezione
 # -----------------------------------------------------------------------------
-def NF_INI_Read(sFileINI):
+def NF_INI_Read(sFileINI: str):
     sProc="NF_INI_Read"
     sResult=""
     dictINI=dict()
@@ -461,7 +498,7 @@ def NF_INI_Read(sFileINI):
 #  sAttr=Attributo scrittura, w/a (non r)
 # Ritorna sResult
 # -----------------------------------------------------------------------------
-def NF_INI_Write(sFileINI, dictINIs, sAttr="w"):
+def NF_INI_Write(sFileINI:str, dictINIs: dict, sAttr="w"):
     sProc="NF_INI_WRITE"
     sResult=""
     sGroup=""
@@ -581,22 +618,76 @@ def NF_PathDirExists(sPath):
     return Path(sPath).is_dir()
 
 # Cerca un Path, anche ricorsivo con jolly e crea un array di files
-# R=Recursivo
+# R=Recursivo. 
 # Ritorna lResult, 0=Risultato, 1=Lista
-def NF_PathFind(sPath, sType=""):
-    sProc="NF_PathFind"
-    sResult=""
-    asPath=[]
-
-# Flag
-    bRec=NF_StrFind(0,sType,"R") != -1
-
-# Ricerca
-    for f in glob.glob(sPath, recursive=bRec): asPath.append(f)
-
-# Uscita
-    lResult=[NF_ErrorProc(sResult,sProc), asPath]
-    return lResult
+# Generata con DeepSeek Prompt PathFind
+def NF_PathFind(sPath: str, sType=""):
+    sResult = ""
+    aResults = []
+    
+    # Validazione parametri
+    if not sPath:
+        sResult = "sProc=PathFind, Error: Path is empty"
+        return sResult, aResults
+    
+    # Imposta il valore di default se sType è vuoto
+    if not sType:
+        sType = "F"
+    
+    # Controlla combinazioni non valide in sType
+    if ('D' in sType and ('X' in sType or 'F' in sType)) or \
+       ('F' in sType and 'X' in sType):
+        sResult = "sProc=PathFind, Error: Invalid sType combination"
+        return sResult, aResults
+    
+    # Determina se la ricerca è ricorsiva
+    recursive = 'R' in sType
+    
+    # Determina cosa cercare
+    find_files = 'F' in sType
+    find_dirs = 'D' in sType
+    find_both = 'X' in sType
+    
+    if find_both:
+        find_files = True
+        find_dirs = True
+    
+    # Se non è specificato nulla, cerca solo files (default)
+    if not find_files and not find_dirs:
+        find_files = True
+    
+    try:
+        if recursive:
+            # Ricerca ricorsiva
+            for root, dirs, files in os.walk(sPath):
+                if find_dirs:
+                    for d in dirs:
+                        full_path = os.path.join(root, d)
+                        if glob.fnmatch.fnmatch(full_path, sPath) or glob.fnmatch.fnmatch(d, os.path.basename(sPath)):
+                            aResults.append(full_path)
+                
+                if find_files:
+                    for f in files:
+                        full_path = os.path.join(root, f)
+                        if glob.fnmatch.fnmatch(full_path, sPath) or glob.fnmatch.fnmatch(f, os.path.basename(sPath)):
+                            aResults.append(full_path)
+        else:
+            # Ricerca non ricorsiva
+            items = glob.glob(sPath)
+            for item in items:
+                if os.path.isdir(item) and find_dirs:
+                    aResults.append(item)
+                elif os.path.isfile(item) and find_files:
+                    aResults.append(item)
+        
+        # Elimina eventuali duplicati
+        aResults = list(set(aResults))
+        aResults.sort()
+        
+    except Exception as e:
+        sResult = f"sProc=PathFind, Error: {str(e)}"
+    
+    return sResult, aResults
 
 # Path dello script corrente
 # Type SCRIPT, ID.NE, PATH, NO.TYPE
@@ -650,7 +741,7 @@ def NF_PathCurDir(*args):
     return sResult
 
 # Add Slash a Path.
-def NF_PathAddSlash(sPath):
+def NF_PathAddSlash(sPath: str):
 
 # Slash per OS
     sSlash=iif(NF_IsWindows(),"\\","/")
@@ -662,7 +753,7 @@ def NF_PathAddSlash(sPath):
 
 # PathMake File e Cartella. Non aggiunge "\" alla fine
 # Parametri: Path, File, Ext
-def NF_PathMake(sPath, sFile, sExt):
+def NF_PathMake(sPath: str, sFile: str, sExt=""):
     sResult=""
 # Setup
     sResult=sPath
@@ -675,7 +766,7 @@ def NF_PathMake(sPath, sFile, sExt):
 
 # Split Path in Path,File,Ext
 # Ritorna tre parametri path,name,ext
-def NF_PathScompose(sFilePath):
+def NF_PathScompose(sFilePath: str):
     sPath = NF_PathAddSlash(os.path.dirname(sFilePath))
     sExt = os.path.splitext(sFilePath)[1][1:]
     sFileName=os.path.basename(sFilePath)
@@ -688,7 +779,7 @@ def NF_PathScompose(sFilePath):
 # Ritorno lResult
 # 0=Ritorno, 1=Dir, 2=File, 3=Ext, 4=FileConExt, 5=FileNormalizzato
 # Result=Eventuale errore
-def NF_PathNormal(sFileIn):
+def NF_PathNormal(sFileIn: str):
     sProc="NF_PathNormal"
     sPath=""
     sExt=""
@@ -734,7 +825,7 @@ def NF_PathNormal(sFileIn):
     return lResult
 
 # Tipo di PATH. N=Non Esiste, F=File, D=Dir
-def NF_PathType(sFile):
+def NF_PathType(sFile: str):
     sResult=""
 
 # Calcolo
@@ -747,7 +838,6 @@ def NF_PathType(sFile):
     return sResult
 
 # ----------------------------- PARAMETRI ------------------------------
-
 
 # Parametri:
 # dictParams=dictionary parametri
@@ -861,7 +951,6 @@ def NF_TS_ToDict(dtDate, sType="B"):
     dictID={0:"Y", 1:"M", 2:"D", 3:"HH", 4:"MM", 5:"SS", 6:"DW", 7:"DY", 8:"DY", 9:"IY", 10:"YW", 11:"YD"}
     sProc="TS.ToDict"
     sResult=""
-
 # Scomposizione
 # Assegna e incrementa Indice
     for nValue in tt:
@@ -869,7 +958,6 @@ def NF_TS_ToDict(dtDate, sType="B"):
         sID=dictID[nValue]
         dictTime[sID]=nValue
         nID=nID+1
-
     # Aggiunge IC (Tipo N/X)
     if (sType!="B") :
         ic=dtDate.isocalendar()
@@ -877,7 +965,6 @@ def NF_TS_ToDict(dtDate, sType="B"):
             sID=dictID[nValue]
             dictTime[sID]=nValue
             nID=nID+1
-
 # Ritorno
     return dictTime
 
@@ -894,12 +981,10 @@ def NF_TS_ToStr(sType="L", **kwargs):
     sProc="TS_ToStr"
     sTS=""
     sOld=""
-
 # NOW DATETIME
     now=datetime.today()
     vDateTime=now
     if sType=="": sType="L"
-
 # Parametri opzionali
     for key,value in kwargs.items():
         if key=="from_dict":
@@ -908,7 +993,6 @@ def NF_TS_ToStr(sType="L", **kwargs):
             sOld=value
         else:
             sResult="key not correct " + key
-
 # Conversione in base al tipo
     if sResult=="":
         if sType=="X":
@@ -917,13 +1001,11 @@ def NF_TS_ToStr(sType="L", **kwargs):
             sTS=NF_DateStrYYYYMMDD(vDateTime) + "." + NF_TimeStrHHMMSS(vDateTime)
         else:
             sResult="Type not corrent: " + sType
-
 # Loop deve essere diverso dal vecchio se specificato
     if (sResult=="") and (sOld != ""):
         while sTS==sOld:
             lResult=NF_TS_ToStr(sType, old=sOld)
             sTS=lResult[1]
-
 # Uscita
     #print(sProc, sResult, sOld, sType, sTS)
     return [NF_ErrorProc(sResult,sProc), sTS]
@@ -935,7 +1017,7 @@ def NF_TS_ToStr2():
 
 # TIMESTAMP: ToStr. Ritorna lresult, 0=sResult, 1=Date, 2=Time, 3=Msec
 # sDateTime: DATE.TIME[.MSEC]
-def NF_TS_FromStr(sDateTime):
+def NF_TS_FromStr(sDateTime: str):
     sResult=""
     sProc="TS_FromStr"
     nMsec=0
@@ -976,7 +1058,7 @@ def NF_DateStrYYYYMMDD(dtDate):
     return sResult
 
 # Da YYYYMMDDStr a Data
-def NF_DateYYYYMMDD_fStr(sDate):
+def NF_DateYYYYMMDD_fStr(sDate: str):
     nYear=int(NF_StrLeft(sDate,4))
     nMonth=int(NF_StrMid(sDate,6,2))
     nDay=int(NF_StrMid(sDate,7,2))
@@ -1049,16 +1131,16 @@ def NF_TypeCast(vDato,sType=None):
     return vDato
 
 # Crea lResult con Errore e Result per return diretto - NON DEVE ESISTERE LRESULT
-def NF_Result(sResult, sProc, vResult):
+def NF_Result(sResult: str, sProc: str, vResult):
     sResult=NF_ErrorProc(sResult, sProc)
     return [sResult,vResult]
 
-# Ritorna 2 Variabili da un lResult di 2
-def NF_Return2(lResult):
+# Ritorna 2 Variabili da un lResult di 2. Conversione
+def NF_Return2(lResult: list):
     return lResult[0],lResult[1]
 
 # Ritorno con Errore sProc aggiunto
-def NF_ErrorProc(sResult, sProc):
+def NF_ErrorProc(sResult: str, sProc: str) -> str:
     #print ("NF_ErrorProc: " + str(type(sResult)))
     if (sResult != ""):
         return sProc + ": Errore " + str(sResult)
@@ -1074,7 +1156,7 @@ def NF_DebugFase(bDebug, sText, sProc):
 # ------------------------------ STRINGHE -------------------------------
 
 # String Test + ", " Append se non è la prima
-def NF_StrAppendExt(sSource, sAppend, sDelimiter=","):
+def NF_StrAppendExt(sSource: str, sAppend: str, sDelimiter=","):
 
     if str(type(sSource)) != "<class 'str'>":
         return sSource
@@ -1085,19 +1167,20 @@ def NF_StrAppendExt(sSource, sAppend, sDelimiter=","):
 
 # Template String Replace from Dict, using template library
 # %Campo
-def NF_StrReplaceDict(sTemplate, dictData):
-    #print ("TEST NF_StrDictReplace: " + sTemplate +" , " + str(dictData))
-    objTemplate=Template(sTemplate)
-    return objTemplate.substitute(dictData)
+def NF_StrReplaceDict(sTemplate: str, dictData: dict):
+    if isinstance(sTemplate, str):
+        template = Template(sTemplate)
+        return template.safe_substitute(dictData)
+    return sTemplate
 
 # Conversione da STR a BOOL - La bool() non funziona bene
-def NF_StrBool(sText):
-    sText=str(sText).upper()
+def NF_StrBool(sText: str):
+    sText=str(sText).strip().upper()
     bResult=iif(sText=="TRUE",True,False)
     return bResult
 
 # Cerca substr i String, -1=Left, 0=Internal, 1=Right
-def NF_StrFind(nPos, sString, sFind):
+def NF_StrFind(nPos: int, sString: str, sFind: str):
     nResult=-1
 
 # Verifiche
@@ -1214,23 +1297,63 @@ def NF_StrObj(objX):
 # Uscita (così è giusto)
     return sResult
 
-# Strip Evoluto. X=NoASC, S=NoSpazi
-def NF_StrStrip(sText,sType):
+# Strip Evoluto. X=NoASC, S=NoSpazi interni, D=Left & Right Space, A=Left & Right Apici, K= doppi apici in uno solo
+def NF_StrStrip(sText: str, sType: str):
     sText=str(sText)
     if sType.find("X") != -1:
         sText = ''.join(cChar for cChar in sText if ( ((ord(cChar)<128) and (ord(cChar)>31))) )
     if sType.find("S") != -1:
         sText = ''.join(cChar for cChar in sText if ( ord(cChar)!=32 )  )
+    if sType.find("D") != -1:
+            sText = sText.lstrip().rstrip()
+    if sType.find("A") != -1:
+        if sText.startswith('"') and sText.endswith('"'):
+            sText = sText[1:-1]
+    if sType.find("K") != -1:
+        sText = sText.replace('""', '"')
     return sText
 
-def NF_StrSplitKeys(sKeys, sDelimiter=","):
+def NF_StrSplitKeys(sKeys: str, sDelimiter=","):
     asFieldsCSV=sKeys.split(sDelimiter)
     asFieldsCSV=NF_ArrayStrNorm(asFieldsCSV,"LRUS")
     return asFieldsCSV
 
+def NF_StrSplitString(sText: str, sDelimiter=';', bNames=False):
+    sResult = ""
+    avFields = []
+    sProc="NF_StrSplitString"
+    
+    # Verifica che il delimitatore sia un singolo carattere
+    if len(sDelimiter) != 1:
+        sResult = "Delimiter must be a single character"
+        return sResult, avFields
+    
+    # Definisce i caratteri permessi
+    if bNames:
+        allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+    else:
+        allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+    
+    # Split della stringa
+    parts = sText.split(sDelimiter)
+    
+    for part in parts:
+        # Rimuove spazi all'inizio e alla fine
+        stripped = part.strip()
+        
+        # Rimuove le virgolette circostanti se presenti
+        if len(stripped) >= 2 and stripped[0] == '"' and stripped[-1] == '"':
+            stripped = stripped[1:-1]
+        
+        # Filtra i caratteri non consentiti
+        filtered = [c for c in stripped if c in allowed]
+        avFields.append(''.join(filtered))
+    
+    return NF_ErrorProc(sResult,sProc), avFields
+
 # Scrive una stringa su file con carriage return
 # sAttr: "a"=Append, "w"=Write
-def NF_StrFileWrite(sFile, sText, sAttr):
+def NF_StrFileWrite(sFile: str, sText: str, sAttr: str):
     sProc="StrFileWrite"
     sResult=""
 
@@ -1252,7 +1375,7 @@ def NF_StrFileWrite(sFile, sText, sAttr):
 
 # Legge un Array dove ogni riga è una riga del file a differenza di NF_FileRead()
 # Return lResult, 0=Result, 1=list con Linee Lette. Si presuppone sia file di texto
-def NF_StrFileRead(sFile):
+def NF_StrFileRead(sFile: str):
     sProc="StrFileRead"
     sResult=""
 
@@ -1276,11 +1399,13 @@ def NF_StrFileRead(sFile):
     return NF_Result(sResult,sProc,lines)
 
 # Ritorno stringa Test
-def NF_StrTestResult(sResult, sProc):
+def NF_StrTestResult(sResult: str, sProc: str):
     if (sResult != ""):
         return "Test " + sProc + ": " + str(sResult)
     else:
         return "Test " + sProc + ": OK"
+
+# Se la conversione di sParam con NF_StrNorm="TRUE" (convertito in maiuscolo) allora bResult=True, se se="FALSE", bResult=False
 
 # Test in serie con stringa di ritorno. Nulla tutto ok
 # 0=Test, 1=StringaPerErrore, 2=FacoltativoIdTest
@@ -1300,7 +1425,7 @@ def NF_StrTests(avTests):
 # --------------------------- ARRAY ---------------------------
 
 # ArrayGet con valore di default per non andare in errore
-def NF_ArrayGet(av, nPos, vDefault):
+def NF_ArrayGet(av, nPos: int, vDefault):
     vResult=vDefault
 # Get Array Len 
     nLen=NF_ArrayLen(av)    
@@ -1381,20 +1506,16 @@ def NF_ArrayCountValues(avArray):
 #   nResult -1,0 o Numero Occorrenze
 def NF_ArrayCountValue(avArray, vValue, sMode=""):
     nResult=0
-
 # Verrà usata
     sMode=""
-
 # Ciclo di Conteggio
     nLen=NF_ArrayLen(avArray)
-
 # Solo se Len>0 altrimenti Count=Len
     if nLen>0:
         for nF1 in range(0, nLen):
             if vValue==avArray(nF1): nResult=nResult+1
     else:
         nResult=nLen
-
 # Uscita
     return nResult
 
@@ -1428,13 +1549,10 @@ def NF_ArrayRemoveRows(avArray, avRemove):
 
 # ArrayTrim  & CASE
 # LR=Trim Space Left/Right, U=UCase, LCase, Capitalize, S=StripSpaces, X=StripNoAsc, F=ForzaStr
-def NF_ArrayStrNorm(asArray, sActions):
-    nIndex=0
+def NF_ArrayStrNorm(asArray: list[str], sActions: str) -> list[str]:
 
 # Setup + Verify
-    if asArray==None: return asArray
     nIndex=0
-
 # Ciclo
     for sArray in asArray:
     # Forza Str
@@ -1454,9 +1572,25 @@ def NF_ArrayStrNorm(asArray, sActions):
     # END + NEXT
         asArray[nIndex]=sArray
         nIndex+=1
-
 # Ritorno
     return asArray
+
+# Replace Array of Str with Templates $ with a Dictionary of Keys
+def NF_ArrayStrReplaceDict(asArray: list[str], dictConfig: dict)  -> list[str]:
+    nIndex=0
+    for sArray in  asArray:
+        asArray[nIndex]=NF_StrReplaceDict(sArray, dictConfig)
+        nIndex +=1
+#  Ritorno
+    return asArray
+
+# Replace Items of Dictionary with Templates $ with a Dictionary of Keys calling NF_StrReplaceDict. 
+def NF_DictStrReplaceDict(dictTemplate: dict, dictConfig: dict)  -> dict:
+    for sKey in dictTemplate.keys():
+        sText=NF_StrReplaceDict(dictTemplate[sKey], dictConfig)
+        dictTemplate[sKey]=sText
+#  Ritorno
+    return dictTemplate
 
 # Ritorna -1 se non esiste, 0=Empty, >0 c'è qualcosa, numero di elementi
 def NF_ArrayLen(avArray):
@@ -1514,7 +1648,6 @@ def	NF_ArraySort(avArray, sMode="A"):
         bReverse=True
     else:
         sResult="Mode invalid " + str(sMode)
-
 # Sort
     if sResult=="":
         avResult=sorted(avArray,reverse=bReverse)
@@ -1549,7 +1682,7 @@ def NF_IsString(vParam):
 
 # Conversione di tipi in dict
 # In: DictParams da verificare, dictConvert Key=Tipo B=Bool, I=Int, N=Float
-def NF_DictConvert(dictParams,dictConvert):
+def NF_DictConvert(dictParams: dict, dictConvert: dict):
     sType=""
     sProc="DictConvert"
 # Verifiche
@@ -1574,7 +1707,7 @@ def NF_DictConvert(dictParams,dictConvert):
     return dictParams
 
 # GET ESTESA, con Valore di defaultt
-def NF_DictGet(dictParams,sKey,vDefault=""):
+def NF_DictGet(dictParams: dict, sKey: str,vDefault=""):
     sKey=str(sKey)
     vResult=dictParams.get(sKey)
     if vResult==None: vResult=vDefault
@@ -1582,7 +1715,7 @@ def NF_DictGet(dictParams,sKey,vDefault=""):
 
 # FROM KEYS PIU' SEMPLICE. Nuovo Dictionary solo delle key scelte "se esistono"
 # VUOTO COMUNQUE SE NESSUNO
-def NF_DictFromKeys(dictParams, avKeys):
+def NF_DictFromKeys(dictParams: dict, avKeys):
     dictResult=dict()
     for vKey in avKeys:
         dictResult[vKey]=dictParams[vKey]
@@ -1609,7 +1742,7 @@ def NF_DictKeys(dictData):
 
 # Ritorna una lista VERA dei valori di un dictionary perché .values ritorna una cosa diversa. una view ref.
 # Ritorna lResult 0=Status, 1=Array Valori
-def NF_DictValues(dictData):
+def NF_DictValues(dictData: dict):
     avResult=[]
     sProc="NF_DictValues"
     if (NF_IsDict(dictData)):
@@ -1634,7 +1767,7 @@ def NF_DictLen(dictParams):
 
 # Dictionary. Esiste singola key
 # Ritorno. True=Esiste, False=No
-def NF_DictExistKey(dictData,vKeyFind):
+def NF_DictExistKey(dictData: dict,vKeyFind):
     lResult=NF_DictKeys(dictData)
     sResult=lResult[0]
     if sResult=="":
@@ -1650,7 +1783,7 @@ def NF_DictExistKey(dictData,vKeyFind):
     return False
 
 # Dictionary. Esiste singolo Valore in Dictionary
-def NF_DictExistValue(dictData,vValueFind):
+def NF_DictExistValue(dictData: dict,vValueFind):
     lResult=NF_DictKeys(dictData)
     sResult=lResult[0]
     if sResult=="":
@@ -1664,7 +1797,7 @@ def NF_DictExistValue(dictData,vValueFind):
     return False
 
 # Verifica esistenza Keys in Dictionary
-def NF_DictExistKeys(dictData, avKeys):
+def NF_DictExistKeys(dictData: dict, avKeys):
     sProc="NF_DictExistKeys"
     sResult=""
 
@@ -1690,7 +1823,7 @@ def NF_DictExistKeys(dictData, avKeys):
     return NF_ErrorProc(sResult, sProc)
 
 # Return dictionary from Array Header/Data
-def NF_DictFromArr(asHeader, avData):
+def NF_DictFromArr(asHeader: list[str], avData):
 # Input: asHeader(array keys), avData(array valori).
 # Se asHeader=[], allora viene riempito di numeri pari a avData oppure i 2 array devono avere stessa lunghezza
 # Ritorno:
@@ -1712,12 +1845,10 @@ def NF_DictFromArr(asHeader, avData):
     bVerify=False
     if NF_IsArray(asHeader) and NF_IsArray(avData):
         if NF_ArrayLen(asHeader)>0 and NF_ArrayLen(avData)>0: bVerify=True
-
 # Verifica lunghezza uguale (salvo zero allora lista 0..n
     if bVerify:
         bVerify = (lHType != lHData)
         sResult=iif(bVerify, "", "lunghezze diverse: Header=" + str(lHType) + ", Data=" + str(lHData))
-
 # Esecuzione
     if sResult=="":
         nIndex=0
@@ -1725,7 +1856,6 @@ def NF_DictFromArr(asHeader, avData):
             vDato=avData[nIndex]
             dictResult.update({sID: vDato})
             nIndex=nIndex+1
-
 # Ritorno
     sResult=NF_ErrorProc(sResult,sProc)
     lResult=[sResult,dictResult,len(asHeader),lHType,lHData,str(type(asHeader)), str(type(avData))]
@@ -1734,7 +1864,7 @@ def NF_DictFromArr(asHeader, avData):
 # Get Param
 # Return: sResult, vValue (doppio)
 # ---------------------------------------------------------------------
-def NF_DictGetParam(dictParam, sKey, sError="", sType=None):
+def NF_DictGetParam(dictParam: dict, sKey: str, sError="", sType=None):
     sProc="DICT.GET.PARAM"
     sResult=""
     vDato=None
@@ -1758,7 +1888,7 @@ def NF_DictGetParam(dictParam, sKey, sError="", sType=None):
 
 # Merge 2 Dict. Ritorno "copia" di Source+Add
 # ---------------------------------------------------------------------
-def NF_DictMerge(dictSource, dictAdd):
+def NF_DictMerge(dictSource: dict, dictAdd: dict):
 
 # Copia
     dictEnd=dictSource.copy()
@@ -1776,7 +1906,7 @@ def NF_DictMerge(dictSource, dictAdd):
 
 # Merge 2 Dict(2) dict di dict. Ritorno "copia" di Source+Add
 # ---------------------------------------------------------------------
-def NF_DictMerge2(dictSource, dictAdd):
+def NF_DictMerge2(dictSource: dict, dictAdd: dict):
 
 # Copia
     dictEnd=dictSource.copy()
@@ -1801,7 +1931,7 @@ def NF_DictMerge2(dictSource, dictAdd):
 
 # DictReplace. sResult=Errore se dictParams non esiste
 # --------------------------------------------------------------------------------------
-def NF_DictReplace(dictParams, sKey, vValue):
+def NF_DictReplace(dictParams, sKey: str, vValue):
     sProc="NF_DictReplace"
     sResult=""
 
@@ -1820,7 +1950,7 @@ def NF_DictReplace(dictParams, sKey, vValue):
 # Result: lResult (0=Status, 1=NewDictionaryResultSorted)
 # DA VERIFICARE
 # -------------------------------------------------------------------------------------
-def NF_DictSort(dictParams, sMode=""):
+def NF_DictSort(dictParams: dict, sMode=""):
     dictResult=dict()
     sProc="NF_DictSort"
     sResult=""
@@ -1862,3 +1992,52 @@ def NF_DictSort(dictParams, sMode=""):
 
 # Uscita
     return NF_Result(sResult,sProc,dictResult)
+
+# ------------------- TABLE (ARRAY BYDIM) FUNCTONS -------------
+# Return Row,Cols of a bidimensional array
+def NF_TableLen(avTable: list):
+
+# Check Empty
+    if not avTable:
+        return -1, -1        
+# Get rows
+    rows = len(avTable)
+
+# Get cols from first row
+# If no rows or first row empty, cols is -1
+    cols = len(avTable[0]) if rows > 0 and avTable[0] else -1
+# Ritorno
+    return rows, cols
+
+# Replace a bidimensional array with a dictionary variables list
+# Input: avTable - bidimensional array string
+# Output: [sResult] and avTable Changed.
+# Call this function with a copy of the original Table or the table to be change directly
+def NF_TableReplaceDict(avTable: list[list[str]], dictVars: dict): 
+    sProc = "NF_TableReplaceDict"
+    sResult = ""
+    row=0
+    col=0
+
+# Check table dimensions
+    rows, cols = NF_TableLen(avTable)
+    if rows == -1 or cols == -1:
+        sResult = "Error not table rows x cols"
+    else:
+        for row in range(0,rows-1):
+            for col in range(0, cols-1):
+                 #print (f"Row {row}, Col {col} Value {avTable[row][col]}")
+                sTemp1=avTable[row][col]
+                sTemp2=NF_StrReplaceDict(sTemp1,dictVars)
+                if sTemp1 != sTemp2:
+                    avTable[row][col]=sTemp2
+ # Ritorno   
+    return NF_ErrorProc(sResult, sProc)
+    
+# True=Valida Email
+def NF_StrIsEmail(email: str):
+# Make a regular expression
+# for validating an Email
+    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+# pass the regular expression and the string into the fullmatch() method
+    return iif(re.fullmatch(regex, email),True,False)

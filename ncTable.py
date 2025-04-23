@@ -9,6 +9,7 @@
 # - SORT
 # - Load/Save tabella da DB (sqLite/mySql) gestito solo da classe NC_DB
 # History:
+# 202504: Usata in ncJobsOS. Cambiata inserendo la Init invece di quella di default Python
 # 202308: Prima versione
 # 202407: Aggiunto GetRecord
 # -----------------------------------------------------------------------------
@@ -17,8 +18,8 @@ from nlDataFiles import NC_CSV
 
 class NC_Table:
 # Campi
-    avData=[]      # Tabella
-    avFields=[]    # Nomi dei Campi (correlato a sFieldKey)
+    avData=[]      # Tabella Dati
+    asFields=[]    # Nomi dei Campi (correlato a sFieldKey)
     sFieldKey=""   # Campo Chiave - DEVE ESSERE PRESENTE in avFields
     sResult=""     # Stato Interno. ""=OK, Altrimenti ERRORE
     IndexKey=-1    # Posizione Campo Indice in avFields- OBBLIGATORIO SPECIFICARLO E CHE SIA TRA I FIELDS
@@ -26,9 +27,11 @@ class NC_Table:
 
 # Inizializzazione
 # -----------------------------------------------------------------------------
-    def __init__(self, asFields, sFieldKey):
+    def __init__(self):
+        pass
+        
+    def Init(self, asFields: list[str], sFieldKey: str):
         sProc="Table.Init"
-
         self.asFields=asFields
         self.avData=[]
         self.sFieldKey=sFieldKey
@@ -38,22 +41,18 @@ class NC_Table:
 
 # Set Valore in Matrice in base a KeyValue - Ritorna sResult. Singola cella
 # -----------------------------------------------------------------------------
-    def SetValue(self, vKeyValue, sField, vValue):
+    def SetValue(self, sKeyValue: str, sField: str, vValue):
         sProc="Table.Set.Value"
-
     # Trova Riga
-        nIndex=self.Find(vKeyValue)
-        if nIndex==-1: sResult="Key Value non trovato: " + str(vKeyValue)
-
+        nIndex=self.Find(sKeyValue)
+        if nIndex==-1: sResult="Key Value non trovato: " + str(sKeyValue)
     # Trova Riga con Index
         if sResult == "":
             lResult=self.IndexField2(sField)
             nIndexField=lResult[1]
             sResult=lResult[0]
-
     # Set Valore in Riga,Campo
         if sResult == "": self.avData[nIndex][nIndexField]=vValue
-
     # Uscita
         sResult=nlSys.NF_ErrorProc(sResult,sProc)
         self.sResult=sResult
@@ -111,13 +110,11 @@ class NC_Table:
 
     # Verifiche
         nIndex=len(self.avTable)
-
         if nIndex != -1:
             self.avData=avTable.copy()
             self.IndexUpdate()
         else:
             sResult="Index errato source"
-
     # Uscita
         sResult=nlSys.NF_ErrorProc(sResult,sProc)
         self.sResult=sResult
@@ -151,8 +148,9 @@ class NC_Table:
         return sResult
 
 # Get in Matrice. Ritorna lResult, 0=Result, 1=Valore
+# nIndex=Numero Record, sKey=Campo
 # -----------------------------------------------------------------------------
-    def Get(self, sKey, vKeyValue, nIndex):
+    def Get(self, sKey: str, nIndex: int):
         sProc="Table.Get"
         sResult=""
         vValue=""
@@ -170,33 +168,11 @@ class NC_Table:
         lResult=[sResult,vValue]
         return sResult
 
-# Get in Matrice. Ritorna lResult, 0=Result, 1=Valore
-# -----------------------------------------------------------------------------
-    def Get2(self, sKey, vKeyValue, sField):
-        sProc="Table.Get2"
-        sResult=""
-
-    # Cerca Index in Tabella
-        nIndex=self.IndexField(sField)
-        if nIndex==-1: sResult="Field non trovato: " + sField
-        sResult=nlSys.NF_ErrorProc(sResult,sProc)
-
-    # Valore
-        if sResult=="":
-            lResult=self.Get(sKey,vKeyValue,nIndex)
-        else:
-            lResult=[sResult,""]
-
-    # Uscita
-        sResult=nlSys.NF_ErrorProc(sResult,sProc)
-        self.sResult=sResult
-        return sResult
-
 # Get Record. In base a key=keyValue ritorna dict con campo=valore
 # Ritorna lResult. 0=Errore, 1=Posizione Record Trovato 0..N-1, -1=NonTrovato, 2=record come dict
 # Parametri, key, KeyValue, Opzionali: type=(0=key, 1=index)
 # -----------------------------------------------------------------------------
-    def GetRecord(self, vKey, sKeyValue, **kwargs):
+    def GetRecord(self, vKey, vKeyValue, **kwargs):
         sProc="Table.Get.Record"
         sResult=""
         dictRecord={}
@@ -211,7 +187,7 @@ class NC_Table:
         if nType==1:
             nIndex=vKey
         else:
-            lResult=self.Index(key, value)
+            lResult=self.Index(vKey, vKeyValue)
             sResult=lResult[0]
             if sResult=="": nIndex=lResult[1]
 
@@ -235,7 +211,7 @@ class NC_Table:
 
 # Get in Matrice. Ritorna lResult, 0=sResult, 1=Array di Valori di una riga
 # -----------------------------------------------------------------------------
-    def GetRow(self, nIndex):
+    def GetRow(self, nIndex: int):
         sProc="Table.Get.Row"
         sResult=""
         vValue=None
@@ -253,7 +229,7 @@ class NC_Table:
 
 # Set Riga o Colonna con unico valore, di solito None
 # -----------------------------------------------------------------------------
-    def FillRow(self, nIndex, vValue=None):
+    def FillRow(self, nIndex: int, vValue=None):
         sProc="Table.Fill.Row"
         sResult=""
 
@@ -273,17 +249,17 @@ class NC_Table:
 
 # Fill every record with value. Return sResult
 # -----------------------------------------------------------------------------
-    def FillCol(self, sFieldName, vValue=None):
+    def FillCol(self, sFieldName: str, vValue=None):
         sProc="Table.Fill.Col"
         sResult=""
 
     # Non per IndexField
-        if (sFieldName==self.sFieldKey): sResult="No FieldKey"
-
+        if (sFieldName==self.sFieldKey): 
+            sResult="No FieldKey"
     # Test Colonna
-        lResult=self.IndexField2(sFieldName)
-        sResult=lResult[0]
-
+        if sResult=="":
+            lResult=self.IndexField2(sFieldName)
+            sResult=lResult[0]
     # Set Every Col
         if sResult=="":
             nRows=self.Len()
@@ -291,7 +267,6 @@ class NC_Table:
                 nIndexField=lResult[1]
                 for nIndex in range(nRows):
                     self.avData[nIndex][nIndexField]=vValue
-
     # Uscita
         sResult=nlSys.NF_ErrorProc(sResult,sProc)
         self.sResult=sResult
@@ -300,13 +275,13 @@ class NC_Table:
 # Get Colonna. Return lResult 0=sResult, 1=ArrayRecords_one_field
 # Senza Record Cancellati
 # -----------------------------------------------------------------------------
-    def GetCol(self, vKey):
+    def GetCol(self, sKey: str):
         sProc="Table.Get.Col"
         sResult=""
         avRows=[]
 
     # Ricerca Indice e controllo dimensione riga. Controllo key
-        lResult=self.IndexField2(vKey)
+        lResult=self.IndexField2(sKey)
         nIndexField=lResult[1]
         sResult=lResult[0]
 
@@ -332,21 +307,21 @@ class NC_Table:
         sResult=""
 
     # Verifica len fields
-        if self.FieldsLen() != nlSys.NF_ArrayLen(avValues): sResult="Dimensione diversa"
-
+        nDim1=self.FieldsLen()
+        nDim2=nlSys.NF_ArrayLen(avValues)
+        if  nDim1 != nDim2 : 
+            sResult=f"Different Dimensions: {nDim1}/{nDim2}"
     # Verifica che la chiave non ci sia già'
-        sKey=nlSys.NF_NullToStr(avValues,self.IndexKey)
-
+        if sResult=="":
+            sKey=nlSys.NF_NullToStr(avValues,self.IndexKey)
     # Aggiunta delle'Array di valori alla tabella
-        if sResult == "": self.avData.append(avValues)
-
+        if sResult == "": 
+            self.avData.append(avValues)
     # Aggiorna indice 1: Prende Chiave, Nuova Len, Indice
         if sResult == "":
             nNewLen=nlSys.NF_ArrayLen(self.avData)
-
     # Update
-        sResult=self.Update()
-
+            sResult=self.Update()
     # Uscita
         sResult=nlSys.NF_ErrorProc(sResult,sProc)
         self.sResult=sResult
@@ -354,7 +329,7 @@ class NC_Table:
 
 # Remove Riga in base a Key - Rimuove anche da Indice
 # -----------------------------------------------------------------------------
-    def Remove(self, sKey, vKeyValue):
+    def Remove(self, sKey: str, vKeyValue):
         sProc="Table.Row.Delete"
         nIndex=self.Len()
 
@@ -379,7 +354,7 @@ class NC_Table:
         nResult=-1
 
     # Ricerca
-        for sField in self.avFields:
+        for sField in self.asFields:
             if sField==self.sFieldKey: break            
             nResult=nResult+1
 
@@ -388,12 +363,12 @@ class NC_Table:
 
 # Come Find ma su qualunque campo della Tabella v -1=No, Oppure>=0
 # -----------------------------------------------------------------------------
-    def Index(self, sKey, vKeyValue):
+    def Index(self, sKey:str, vKeyValue):
     # Setup
         nResult=-1
 
     # Ricerca
-        for sField in self.avFields:
+        for sField in self.asFields:
             if sField==self.sFieldKey:
                 break
             else:
@@ -403,7 +378,7 @@ class NC_Table:
 
 # Come IndexField ma ritorna stringa con errore
 # -----------------------------------------------------------------------------
-    def IndexTest(self,nIndex):
+    def IndexTest(self,nIndex: int):
         sProc="TABLE.INDEX.TEST"
         sResult=""
 
@@ -413,16 +388,16 @@ class NC_Table:
 
 # Trova numero colonna corrispondente a stringa sKey come nome campo. v. -1=No, Oppure >=0
 # --------------------------------------------------------------------------------------------------
-    def IndexField(self, sKey):
+    def IndexField(self, sKey: str):
     # Indice
-        nIndex=nlSys.NF_ArrayFind(self.avFields(), sKey)
+        nIndex=nlSys.NF_ArrayFind(self.asFields(), sKey)
     # Fine
         return nIndex
 
 #
 # Come self.IndexField ma invece di numero ritorna lResult (per usi ritorno vari), dove 0=sResult, 1=Index campo
 # -------------------------------------------------------------------------------------------------------
-    def IndexField2(self, sKey):
+    def IndexField2(self, sKey: str):
         sProc="IndexField2"
         sResult=""
 
@@ -486,7 +461,7 @@ class NC_Table:
     # Conversione
         try:
             self.avData=objCSV.avTable.copy()
-            self.avFields=objCSV.avFields.copy()
+            self.asFields=objCSV.avFields.copy()
             self.sFieldKey=objCSV.sFieldKey
         except:
             sResult="Errore conversione da CSV a TABLE"

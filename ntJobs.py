@@ -1,6 +1,7 @@
 # Lancio naJobs Componenti per eseguire una APP ntJobsOS o singoli comandi senza necessità
 # di una App ntJobs controllata da ntJobsOs
 # Mentre NJOS va in LOOP in questo script, ogni altro comando viene eseguito RILANCIANDO un'altra istanza dello script
+# 20250420: Aggiunto XLSIMP e Sistemazioni Varie per gestire ocomandi già presenti
 # 20250130: Sistemazioni varie
 # 20240927: Diventa ntJobs.py ed è hub di lancio sia di ntJobsOS sia di singoli comandi tramite file .ini come parametro
 # e file di supporto nella stessa cartella del file .ini
@@ -13,8 +14,8 @@ import nlSys, nlExt, os, sys
 from ncJobsApp import NC_Sys
 import configparser
 
-# Global App Container
-jData=None
+# Application Object
+jData=NC_Sys()                                  
 
 # Test Mode
 NT_ENV_TEST=True
@@ -22,12 +23,11 @@ NT_ENV_TEST=True
 # Start App
 # -----------------------------------------------------------------------------
 def Start():
-    sProc="JOBS.Start"
+    sProc="JOBS.START"
     sResult=""   
 
 # Setup e Argomenti CMDLINE
 # -----------------------------------------------------------------------------
-    jData=NC_Sys()                                  # Application Object
     
 # DA COMPLETAE CON GESTIONE PARAMETRI OBBLIGATORI
 # DICTIONART ACTION->Dictionary PARAM CON POSSIBILI VALORI con verifica. 
@@ -36,8 +36,9 @@ def Start():
 # N=Numero, B=Boolean, A=AlfanumericoSenzaCaratteriParticolari, S=SimboliAscSeparator, C=A+Simboli, X=Tutto. D=SoloAlfabeticiMaiuscolo,
 # M=MAIL, H=HOST,F=FileCheDeveEsistere, Z:FormatoFileAncheNonEsistente, S=SimboliAsc, C=CaratteriAscII. H=IndirizzoHost
 # # JOBS.INI VIRTUALE (CREATO LIVE DA COMMAND LINE)
-    dictParams={"CSV2XLS": {"FILE.IN":"", "FILE.OUT":"", "SHEET":""},
-        "MAIL.SEND": {"CHANNEL":"*@D:SMTP",
+    dictParams={
+        "CSV2XLS": {"IN.FILE":"", "OUT.FILE":"", "SHEET":""},
+        "MAIL": {"CHANNEL":"*@D:SMTP",
                       "SMTP.SERVER":"H",
                       "SMTP.USER":"C",
                       "SMTP.PASSWORD":"C",
@@ -51,30 +52,42 @@ def Start():
                       "BODY.FILE":"*F",
                       "ATTACH":"*F",
                       "F1":"*X", "F2:":"*X","F3":"*X","ATTR":"*X"},
-        "XLS2CSV": {"FILE.IN":"F", "FILE.OUT":"Z", "SHEET":"A"},
+        "ADMIN.TEST": {"G": ["admin"], "TEXT1":"T", "NUM1":"N", "B1":"F","FILE.TEST":"Z"},        
+        "USER.TEST": {},                
+        "PC.RELOAD": {"G": ["admin"]},                
+        "PC.QUIT": {"G": ["admin"]},                        
+        "NJOS.START": {"G": ["admin"]},                                
+        "NJOS.END": {"G": ["admin"]},
+        "EXEC.WIN": {"G": ["admin"],"CDMLINE": ""},
+        "EXEC.LINUX": {"G": ["admin"],"CDMLINE": ""},
+        "NJOS.RESTART": {"G": ["admin"]},        
+        "XLSIMP": {"XLS.TEMPLATE":"F", "XLS.DAT":"F", "SHEET":"A"},
+        "XLS2CSV": {"IN.FILE":"F", "OUT.FILE":"Z", "SHEET":"A"},
+        "CSV2XLS": {"IN.FILE":"F", "OUT.FILE":"Z", "SHEET":"*A"},                
+        "XLS2ICS": {"XLS.IN":"*F", "ICS.OUT":"*Z"},
         "PDF.FILL": {"TRIM":"*B", "DELIMITER":"*S", "FIELDS":"X", 
-                     "FILE.IN":"F", "FIELD.KEY":"C","FILE.PDF":"*Z",
+                     "IN.FILE":"F", "FIELD.KEY":"C","FILE.PDF":"*Z",
                      "FILE.CSV":"F","FIELDS.CSV":"*A","FILE.PDF.PREFIX":"*F"}
     }
     
-# Test Args
-    asArgs=nlSys.iif(NT_ENV_TEST,[sys.argv[0],"test\\test_mail_single.ini"],sys.argv)
-    # = 2 print(len(asArgs))
+# Test Args - NoParametri=Test
+    bTest=nlSys.iif(len(sys.argv)==1,NT_ENV_TEST,False)    
+    asArgs=nlSys.iif(bTest,[sys.argv[0],"test\\test_test.ini"],sys.argv)
+    nlSys.NF_DebugFase(NT_ENV_TEST, "Test.: " + str(bTest) + ", Args: " + str(asArgs),sProc)    
     
-# Init Params - Versione 20250222                     
+# Init Params - Versione 20250222                         
     sResult=jData.Init("NTJOBS", asArgs,
         params=dictParams,                       # Parametri associati ai comandi
         log=True,                                # Prevedi il Log
-        test=NT_ENV_TEST,                        # Test Mode
+        test=bTest,                              # Test Mode
         live=0,                                  # Secondi di check di LiveApp 0=No
         cb=cbActions)                            # CallBack Azioni    
         #args=asArgs.copy(),                      # Argomenti
 # Run (All in One)
 # ---------------------------------------------------------------------------
-    print ("Start.Post.Init: " + str(jData.sID) + ", TimeStamp: " + str(jData.sTS_Start))
+    nlSys.NF_DebugFase(NT_ENV_TEST, "Start.Post.Init: " + str(jData.sID) + ", TimeStamp: " + str(jData.sTS_Start),sProc)
     if sResult=="":
         sResult=jData.Run()
-
 # Fine
     return nlSys.NF_ErrorProc(sResult,sProc)
 
@@ -90,8 +103,8 @@ def cbActions(dictParams):
 # if len(lResult) > 3: self.sResultNotes=""
     lResult=["",{},{},""]
     sAction=nlSys.NF_DictGet(dictParams,"ACTION","")
+    jData.sAction=sAction
     nlSys.NF_DebugFase(NT_ENV_TEST, "Start Azione: " + sAction, sProc)    
-    
 # --------------- Azioni NJOS --------------------------
     if sAction=="NJOS.START":
         sResult=actNJOS_Start(dictParams)
@@ -101,28 +114,40 @@ def cbActions(dictParams):
         sResult=actNJOS_End()
         if sResult=="":
             sResult=actNJOS_Restart()
-# -------------- Azioni FILE XLS ------------------------
+# ---------------- AZIONI ADMIN --------------------
+    elif sAction=="PC.RELOAD": 
+        sResult=actAdmin_Reload()
+    elif sAction=="PC.QUIT": 
+        sResult=actAdmin_Quit()
+    elif sAction=="EXEC.WIN": 
+        sResult=actAdmin_Exec_Win()
+    elif sAction=="EXEC.LINUX": 
+        sResult=actAdmin_Exec_Linux()
+
+# -------------- Azioni FILE XLS/ICS ------------------------
     elif sAction=="CSV2XLS":
         sResult=actCSV2XLS(dictParams)
     elif sAction=="XLS2CSV":
         sResult=actXLS2CSV(dictParams)        
-    #elif sAction=="XLS.MERGE":
-    #    import nlDataFiles
-    #    sResult=nlDataFiles.actXLS_Merge(dictParams)
-    #elif sAction=="XLS.SPLIT":
-    #    import nlDataFiles
-    #    sResult=nlDataFiles.cmdXLS_Split(dictParams)
-# ---------- Azioni FILE PDF-----------------------------
+    elif sAction=="XLS2ICS":
+        sResult=actXLS2ICS(dictParams)
+    elif sAction=="XLSIMP":
+        sResult=actXLSIMP(dictParams)    
+# ---------- Azioni Applicative: PDF / MAIL -----------------------------
     elif sAction=="PDF.FILL":
-        import nlDataFiles
-        sResult=nlDataFiles.cmdPDF_Fill(dictParams)
+        sResult=actPDF_Fill(dictParams)(dictParams)
+    elif sAction=="MAIL":
+        sResult=actMail(dictParams)
+
 # ---------- Azioni VARIE -------------------------------
     elif sAction=="PATH.MIRROR":
         sResult=actPATH_Mirror(dictParams)
     elif sAction=="MAIL":
         sResult=actMail(dictParams)        
-    elif sAction=="TEST":
-        sResult=actTest(dictParams)
+    elif sAction=="JOS.TEST.ADMIN":
+        sResult=actTest(dictParams)        
+    elif sAction=="JOBS.TEST.USER":
+        sResult=actTest(dictParams)        
     else:
         nlSys.NF_DebugFase(NT_ENV_TEST, "Azione non valida: " + sAction, sProc)    
         sResult=f"ACTION non valida: [{sAction}]"
@@ -145,11 +170,9 @@ def actNJOS_Start():
         while objNJOS.bExitFull==False:
             nlSys.NF_DebugFase(NT_ENV_TEST,"NJOS Loop",sProc)
             sResult=objNJOS.Loop()
-
 # EXIT PER Errore
     if sResult != "":
         objNJOS.bExitFull=True
-
 # FINE
     sResult=nlSys.NF_ErrorProc(sResult,sProc)
     return [sResult]
@@ -161,13 +184,10 @@ def actNJOS_End():
 
 # Get the current script directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
-
 # Create the .ini file in the current directory
     config_file_path = os.path.join(current_dir, 'jobs.end')
-
 # Write 
     sResult=nlSys.NF_FileWrite(config_file_path)
-    
 # FINE
     sResult=nlSys.NF_ErrorProc(sResult,sProc)
     return [sResult]
@@ -179,13 +199,10 @@ def actNJOS_Restart():
 
 # Get the current script directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
-
 # Create the .ini file in the current directory
     config_file_path = os.path.join(current_dir, 'jobs.restart')
-
 # Write 
     sResult=nlSys.NF_FileWrite(config_file_path)
-    
 # FINE
     sResult=nlSys.NF_ErrorProc(sResult,sProc)
     return [sResult]
@@ -233,7 +250,7 @@ def actPDF_Fill(dictParams):
             "TRIM": bTrim,
             "DELIMITER": nlDataFiles.sCSV_DELIMITER,
             "FIELDS": asFields,
-            "FILE.IN": sCSV_File,
+            "IN.FILE": sCSV_File,
             "FIELD.KEY": sFieldKey}
         sResult=objCSV.Read()
         nlSys.NF_DebugFase(NT_ENV_TEST, "Load CSV: " + sResult, sProc)
@@ -275,10 +292,23 @@ def actPDF_Fill(dictParams):
     sResult=nlSys.NF_ErrorProc(sResult,sProc)
     return [sResult]
 
-# ------------------------------- AZIONI EXCEL/CSV ----------------------------------
+# Mail
+# ----------------------------------------------------------------------------------------
+def actMail(dictParams: dict): 
+    sProc="CMD_MAIL"
+    sResult=""
+
+# DA FARE
+    sResult="To Be Written"
+
+# FINE
+    sResult=nlSys.NF_ErrorProc(sResult,sProc)
+    return [sResult]
+
+# ------------------------------- AZIONI EXCEL/CSV/ICS ----------------------------------
 
 # Command CSV2XLS
-# ------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------
 # Parametri:
 # FILE.IN   = Nome file di imput csv
 # FILE.OUT  = Nome file di output xls
@@ -292,8 +322,8 @@ def actCSV2XLS(*args):
     nArgs=len(args)
 
 # Parameters
-    sFileIn=jData.GetParam("FILE.IN", "File in non dichiarato")
-    sFileOut=jData.GetParam("FILE.OUT", "File out non dichiarato")
+    sFileIn=jData.GetParam("IN.FILE", "File in non dichiarato")
+    sFileOut=jData.GetParam("OUT.FILE", "File out non dichiarato")
     sSheetName=jData.GetParam("SHEET", "Sheet non dichiarato")
     nlSys.NF_DebugFase(NT_ENV_TEST, "Parameters. Arg0: " + sFileIn + ",  Arg1: " + sFileOut + ", Arg2: " + sSheetName, sProc)
 
@@ -316,6 +346,41 @@ def actCSV2XLS(*args):
     sResult=nlSys.NF_ErrorProc(sResult,sProc)
     return [sResult]
 
+# Command XLS2ICS
+# ----------------------------------------------------------------------------------------
+# Parametri:
+# FILE.IN   = Nome file di iNput XLS
+# FILE.OUT  = Nome file di output ICS
+
+def actXLS2ICS(*args):
+    sProc="CMD_XLS2ICS"
+    sResult=""
+    sFileIn=""
+    sFileOut=""
+    nArgs=len(args)
+
+# Parameters
+    sResult,sFileIn=jData.GetParam("IN.FILE", "File in non dichiarato")
+    if sResult=="":            
+        sResult,sFileOut=jData.GetParam("OUT.FILE", "File out non dichiarato")
+        if sResult != "": sFileOut=""        
+    else:
+        sFileIn=""    
+# Remapping in e out (da non specificare o "#" se da remapping
+    if sResult=="":
+        sResult,sFileIn,sFileOut=nlSys.NF_PathRemapInOut(sFileIn,sFileOut,"ics")
+        nlSys.NF_DebugFase(NT_ENV_TEST, "Parameters. Arg0: " + sFileIn + ",  Arg1: " + sFileOut, sProc)
+# Debug Message
+    if sResult=="":
+# Create ncICS object
+        import ncICS
+        objICS=ncICS.NC_ICS()
+        nlSys.NF_DebugFase(NT_ENV_TEST, "Read & Write. IN " + sFileIn + ",  OUT " + sFileOut, sProc)
+        sResult=objICS.CreateFromXLS(sFileIn,sFileOut)
+# FINE
+    sResult=nlSys.NF_ErrorProc(sResult,sProc)
+    return [sResult]
+
 # Comando XLS2CSV
 # ------------------------------------------------------------------------------------------------------------
 # Parametri:
@@ -330,8 +395,8 @@ def actXLS2CSV(dictParams):
     sSheetName=""
 
 # Parameters
-    sFileIn=jData.GetParam("FILE.IN", "File in non dichiarato")
-    sFileOut=jData.GetParam("FILE.OUT", "File out non dichiarato")
+    sFileIn=jData.GetParam("IN.FILE", "File in non dichiarato")
+    sFileOut=jData.GetParam("OUT.FILE", "File out non dichiarato")
     sSheetName=jData.GetParam("SHEET", "Sheet non dichiarato")
     nlSys.NF_DebugFase(NT_ENV_TEST, "Parameters. Arg0: " + sFileIn + ",  Arg1: " + sFileOut + ", Arg2: " + sSheetName, sProc)
 
@@ -351,40 +416,89 @@ def actXLS2CSV(dictParams):
     if sResult=="":
         nlSys.NF_DebugFase(NT_ENV_TEST, "Write CSV", sProc)
         sResult=objPanda.write_to_csv(sFileOut)
-
 # FINE
     sResult=nlSys.NF_ErrorProc(sResult,sProc)
     return [sResult]
 
-# ------------------------------ AZIONI VARIE ---------------------------
-
-# Mail
-def actMail(dictParams={}):
-    sProc="CMD.MAIL"
+# Comando XLS2CSV
+# ------------------------------------------------------------------------------------------------------------
+# Parametri:
+# IN.FILE   = Nome file di imput xls
+# DAT.FILE  = Nome file di output csv
+# SHEET     = Sheet dopo il quale importare
+def actXLSIMP(dictParams):
+    sProc="CMD_XLSIMP"
     sResult=""
+    sFileIn=""
+    sFileDat=""
+    sSheetName=""
+    objImport=None
 
-# Modulo mail
-#    import ncMailSend
-#    objMailSend)
-# Invio Parametri
-#    sResult=ncMailSend.NTM_MailSend(dictParams)  
-# FINE
-#    return nlSys.NF_ErrorProc(sResult,sProc)    
+# Parameters
+    sFileIn=jData.GetParam("XLS.TEMPLATE", "File in non dichiarato")
+    sFileDat=jData.GetParam("XLS.DAT", "File out non dichiarato")
+    sSheetName=jData.GetParam("SHEET", "Sheet non dichiarato")
+    nlSys.NF_DebugFase(NT_ENV_TEST, f"Parameters. XLS.TEMPLATE: {sFileIn},  XLS.DAT: {sFileDat}, Sheet: {sSheetName}", sProc)
+# Library
+    from ncImportXLS import XLSXImporter
+    objImport=XLSXImporter
+# Action
+    objImport.Start(sFileDat, sFileIn, sSheetName)
+    sResult=objImport.Import()
+# Fine
+    sResult=nlSys.NF_ErrorProc(sResult,sProc)
+    return [sResult]
+
+# ------------------------------ AZIONI ADMIN ---------------------------    
+
+# Spegnimento PC
+def actAdmin_Quit():
+    import ncSystem
+    objSys=ncSystem
+    objSys.sys_shutdown()
+    
+# Reload PC    
+def actAdmin_Reload():
+    import ncSystem    
+    objSys=ncSystem
+    objSys.sys_reload()
+
+# Exec CmdLine Windows    
+def actAdmin_Exec_Linux(dictParams={}):
+    sProc="CMD.EXEC.WIN"
+    sResult=""
+# Exec
+    sCmdLine=nlSys.NF_DictGet("CMDLINE")
+    sResult=nlSys.NF_Exec(cmdline=sCmdLine)
+# Fine
+    sResult=nlSys.NF_ErrorProc(sResult,sProc)
+    return [sResult]
+        
+# Exec CmdLine Windows    
+def actAdmin_Exec_Win(dictParams={}):
+    sProc="CMD.EXEC.WIN"
+    sResult=""
+# Exec
+    sCmdLine=nlSys.NF_DictGet("CMDLINE")
+    sResult=nlSys.NF_Exec(cmdline=sCmdLine)
+# Fine
+    sResult=nlSys.NF_ErrorProc(sResult,sProc)
+    return [sResult]
+
+
+# ------------------------------ AZIONI VARIE ---------------------------
 
 # Solo un TEST di ntJobs
 def actTest(dictParams={}):
     sProc="CMD.TEST"
-    sResult=""
+    sResult=""    
 
-    print("Test command")
-
-    for key in dictParams.keys():
-        value=dictParams[key]        
-        print("Param: " + key + ", Value: " + value)
+# Debug
+    nlSys.NF_DebugFase(NT_ENV_TEST, "Test action. Params: " + str(dictParams), sProc)
 
 # Ritorno        
-    jData.dictReturnFiles={"FILE1": "test\test_mail_single.ini"}
-    jData.dictReturnVars={"VAR1":"v1"}
+    #jData.ReturnCalcAddExtra("FILES", {"FILE.1": "test\test_mail_single.ini"})
+    #jData.ReturnCalcAddExtra("VARS", dictParams)
     jData.sResultNotes="Nota di Ritorno"
 
 # FINE
