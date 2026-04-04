@@ -1,0 +1,7 @@
+ACT_ID;ACT_NAME;ACT_GROUPS;ACT_SCRIPT;ACT_ENABLED;ACT_PATH;ACT_HELP;ACT_TIMEOUT
+sys.reload;Reload;admin;;True;;Reload PC;0
+sys.quit;Shutdown PC;admin;;True;;Shutdown PC;0
+sys.end;Shutdown NTJOBSOS;admin;;True;;Shutdown NTJOBSOS;0
+sys.mail.admin;Mail di test Admin;;admin;True;%$SYSROOT;Send test email to admin user;60
+sys.mail.user;Mail di test User;;all;True;%$SYSROOT;Send test email to user;60
+mach0.delfiles;Run Script MACH0.DelFiles;admin;ntj_delfiles.cmd;True;K:\APPLIC_ISP\ntj_delfiles;Purge Users Temp Fiels;600
