@@ -3,7 +3,7 @@ NewTechJobs - Python Version
 
 Python Framework but also Batch Launch Jobs Platform for batch working using cloud and webservice input/output and mailing as frontend with end user
 
-Alpha Release - Not working - Under development
+Beta Release in testing Offline Windows Linux and Hosting linux
 
 See index.xlsx for files list
 
