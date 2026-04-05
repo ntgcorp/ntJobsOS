@@ -18,11 +18,8 @@ Execution: Python ntJobs.py action -parameter_key -parameter_value eccc...
 
 ----------------- ntJobsPy Conventions --------------------------
 
-  sResult = Return string as ntJobs in case of single returns
-  lResult = Return list with multiple returns since it is not possible to modify global variables or byRef in Python. Where 0 = sResult
-  NF_ErrorProc = Construction of the return error string with the name of the Proc where it occurs
-   
-  ntJobs  = ntJobsOS Start Applications. Special naJobs Unique FrontEndApp
+ jobs.ini = Script to send commands to ntJobs aerver
+  ntJobs  = ntJobsOS Start Applications.
   nl*     = ntJobs Libraries
   nc*     = OS and FrontEnd Class (called from ntJobs Apps)
   test*   = Test code
