@@ -1,26 +1,42 @@
 @ECHO OFF
-REM ============================================================
-REM ntjobs_reload.cmd
-REM Invia il comando SYS.RELOAD ad aiJobsOS2.
-REM Lo script Python crea ntjobs.restart e termina.
-REM Il CMD launcher rileva ntjobs.restart e fa GOTO :START,
-REM ricaricando da zero config, utenti e azioni.
-REM ============================================================
+:: Sposta la directory corrente nella cartella dove risiede il file .bat
+:: PUSHD gestisce correttamente anche i percorsi di rete (UNC)
+PUSHD "%~dp0"
 
-ECHO Creazione jobs.ini SYS.RELOAD...
+:: Definiamo il percorso di destinazione (livello precedente + users/admin)
+SET "TARGET_DIR=..\Users\admin"
+SET "FILE_PATH=%TARGET_DIR%\jobs.ini"
+SET "SYS_COMMAND=SYS.RELOAD"
 
+ECHO Creazione jobs.ini %SYS_COMMAND%...
+
+:: Creiamo le cartelle. Se il percorso e' UNC, PUSHD lo ha gia risolto.
+IF NOT EXIST "%TARGET_DIR%" (
+    MKDIR "%TARGET_DIR%" 2>NUL
+)
+
+:: Scrittura del file
 (
-ECHO [CONFIG]
-ECHO TYPE=NTJOBS.APP.1.0
-ECHO NAME=SYS_RELOAD
-ECHO.
-ECHO [JOB_RELOAD]
-ECHO COMMAND=SYS.RELOAD
-) > "K:\ntjobsai2\users\admin\jobs.ini"
+    ECHO [CONFIG]
+    ECHO TYPE=NTJOBS.APP.1.0
+    ECHO NAME=SYS_COMMAND
+    ECHO.
+    ECHO [JOB_COMMAND]
+    ECHO ACTION=%SYS_COMMAND%
+) > "%FILE_PATH%" 2>NUL
 
-IF ERRORLEVEL 1 (
-    ECHO ERRORE: impossibile creare jobs.ini
+:: Verifica finale
+IF EXIST "%FILE_PATH%" (
+    ECHO OK - ntjobsos ripartira con la configurazione aggiornata.
+    ECHO Creato in: %TARGET_DIR%
+) ELSE (
+    ECHO ERRORE: impossibile creare jobs.ini.
+    ECHO Controlla i permessi di scrittura in: %TARGET_DIR%
+    POPD
+    PAUSE
     EXIT /B 1
 )
 
-ECHO OK - aiJobsOS2 ripartira con la configurazione aggiornata.
+:: Torna al percorso originale e libera la lettera di unita' virtuale
+POPD
+PAUSE

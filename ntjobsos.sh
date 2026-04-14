@@ -9,7 +9,7 @@
 #   - Se al ritorno esiste ntjobs.shutdown → esegue shutdown -h now
 # ==============================================================
 
-SYSROOT="/opt/ntjobsai2"
+SYSROOT="/opt/ntjobsos"
 PYTHON="python3"
 
 cd "$SYSROOT" || { echo "ERRORE: impossibile accedere a $SYSROOT"; exit 1; }
@@ -24,13 +24,18 @@ while true; do
     done
 
     # Lancia lo script Python
-    $PYTHON "$SYSROOT/aiJobsOS2.py"
+    $PYTHON "$SYSROOT/ntjobsos.py"
 
     # Controlla i file flag al ritorno
     if [ -f "ntjobs.restart" ]; then
         echo "NTJOBSOS.RESTART - riavvio configurazione..."
-        continue   # torna all'inizio del while (equivalente GOTO :START)
-    fi
+		shutdown -s now
+		break        
+    fi	
+    if [ -f "ntjobs.restart" ]; then
+        echo "NTJOBSOS.RELOAD - riavvio configurazione..."
+		continue
+    fi	
 
     if [ -f "ntjobs.shutdown" ]; then
         echo "NTJOBSOS.SHUTDOWN"

@@ -6,7 +6,7 @@ PUSHD "%~dp0"
 :: Definiamo il percorso di destinazione (livello precedente + users/admin)
 SET "TARGET_DIR=..\Users\admin"
 SET "FILE_PATH=%TARGET_DIR%\jobs.ini"
-SET "SYS_COMMAND=SYS.QUIT"
+SET "SYS_COMMAND=SYS.RESTART"
 
 ECHO Creazione jobs.ini %SYS_COMMAND%...
 

@@ -1,26 +1,42 @@
 @ECHO OFF
-REM ============================================================
-REM ntjobs_shutdown.cmd
-REM Invia il comando SYS.SHUTDOWN ad aiJobsOS2.
-REM Lo script Python crea ntjobs.shutdown e termina.
-REM Il CMD launcher rileva ntjobs.shutdown ed esegue
-REM SHUTDOWN.EXE /S per spegnere il PC.
-REM ============================================================
+:: Sposta la directory corrente nella cartella dove risiede il file .bat
+:: PUSHD gestisce correttamente anche i percorsi di rete (UNC)
+PUSHD "%~dp0"
 
-ECHO Creazione jobs.ini SYS.SHUTDOWN...
+ECHO Creazione jobs.ini SYS.RELOAD...
 
+:: Definiamo il percorso di destinazione (livello precedente + users/admin)
+SET "TARGET_DIR=..\Users\admin"
+SET "FILE_PATH=%TARGET_DIR%\jobs.ini"
+SET "SYS_COMMAND=SYS.SHUTDOWN"
+
+:: Creiamo le cartelle. Se il percorso e' UNC, PUSHD lo ha gia risolto.
+IF NOT EXIST "%TARGET_DIR%" (
+    MKDIR "%TARGET_DIR%" 2>NUL
+)
+
+:: Scrittura del file
 (
-ECHO [CONFIG]
-ECHO TYPE=NTJOBS.APP.1.0
-ECHO NAME=SYS_SHUTDOWN
-ECHO.
-ECHO [JOB_SHUTDOWN]
-ECHO COMMAND=SYS.SHUTDOWN
-) > "K:\ntjobsai2\jobs.ini"
+    ECHO [CONFIG]
+    ECHO TYPE=NTJOBS.APP.1.0
+    ECHO NAME=SYS_COMMAND
+    ECHO.
+    ECHO [JOB_COMMAND]
+    ECHO ACTION=%SYS_COMMAND%
+) > "%FILE_PATH%" 2>NUL
 
-IF ERRORLEVEL 1 (
-    ECHO ERRORE: impossibile creare jobs.ini
+:: Verifica finale
+IF EXIST "%FILE_PATH%" (
+    ECHO OK - ntjobsos ripartira con la configurazione aggiornata.
+    ECHO Creato in: %TARGET_DIR%
+) ELSE (
+    ECHO ERRORE: impossibile creare jobs.ini.
+    ECHO Controlla i permessi di scrittura in: %TARGET_DIR%
+    POPD
+    PAUSE
     EXIT /B 1
 )
 
-ECHO OK - Il PC si spegnera al termine del ciclo corrente.
+:: Torna al percorso originale e libera la lettera di unita' virtuale
+POPD
+PAUSE
