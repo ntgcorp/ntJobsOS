@@ -1,0 +1,2 @@
+call ntj_sendmail_olk.cmd ntjobs_maildemo_olk.ini
+pause
